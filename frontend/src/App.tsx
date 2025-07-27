@@ -4,6 +4,7 @@ import StatusBanner from './components/StatusBanner';
 import GameLobby from './components/GameLobby';
 import GameBoard from './components/GameBoard';
 import GameHistory from './components/GameHistory';
+import Footer from './components/Footer';
 import { useWeb3 } from './contexts/Web3Context';
 import { localhost } from './constants';
 import abi from './abi/PrisonersDilemmaContract.json';
@@ -512,6 +513,7 @@ function App() {
         )}
         <GameHistory history={gameHistory} />
       </main>
+      <Footer />
     </div>
   );
 }
