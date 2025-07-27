@@ -1,0 +1,36 @@
+{
+    "name": "Arbitrum Stylus Workshop",
+    "image": "mcr.microsoft.com/devcontainers/rust:latest",
+  
+    "features": {
+      "ghcr.io/devcontainers/features/node:1": {
+        "version": "20"
+      },
+      "ghcr.io/devcontainers/features/docker-in-docker:1": {},
+      "ghcr.io/devcontainers/features/git:1": {}
+    },
+  
+    "postAttachCommand": "rustup install 1.87.0 && rustup default 1.87.0 && rustup target add wasm32-unknown-unknown && npm install -g pnpm && pnpm install -r && cargo install --force cargo-stylus && curl -L https://foundry.paradigm.xyz | bash && /home/vscode/.foundry/bin/foundryup",
+  
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "rust-lang.rust-analyzer",
+          "esbenp.prettier-vscode"
+        ]
+      }
+    },
+  
+    "forwardPorts": [
+      3000,
+      8547
+    ],
+  
+    "remoteEnv": {
+      "RUSTUP_HOME": "/usr/local/rustup",
+      "CARGO_HOME": "/usr/local/cargo",
+      "PATH": "/usr/local/cargo/bin:/usr/local/rustup/bin:/home/vscode/.foundry/bin:/home/vscode/.cargo/bin:${env:PATH}"
+    },
+  
+    "remoteUser": "vscode"
+  }
