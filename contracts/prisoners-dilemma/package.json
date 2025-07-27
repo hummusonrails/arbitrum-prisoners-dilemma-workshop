@@ -3,6 +3,7 @@
     "scripts": {
       "check": "cargo stylus check --endpoint=\"${STYLUS_RPC_URL:-http://localhost:8547}\"",
       "estimate-gas": "cargo stylus deploy --endpoint=\"${STYLUS_RPC_URL:-http://localhost:8547}\" --private-key=\"${DEPLOY_PRIVATE_KEY:-0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c22138887752191c9520659}\" --estimate-gas",
+      "test": "cargo test",
       "deploy:local": "cargo stylus deploy --endpoint=\"${STYLUS_RPC_URL:-http://localhost:8547}\" --private-key=\"${DEPLOY_PRIVATE_KEY:-0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c22138887752191c9520659}\"",
       "build": "cargo build --release --target wasm32-unknown-unknown",
       "build:wasm": "cargo build --release --target wasm32-unknown-unknown -Z build-std=std,panic_abort",
