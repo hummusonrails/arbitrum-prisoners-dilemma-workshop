@@ -104,14 +104,17 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
       console.log('[Web3Provider] Accounts changed:', accounts);
       if (accounts.length === 0) {
         disconnect();
-      } else if (accounts[0] !== address) {
+      } else if (accounts[0] !== address && !isConnected) {
         connect();
       }
     };
     
     const handleChainChanged = () => {
       console.log('[Web3Provider] Chain changed, reconnecting...');
-      connect();
+      // Add a small delay to prevent rapid reconnections
+      setTimeout(() => {
+        connect();
+      }, 100);
     };
     
     (window as any).ethereum.on('accountsChanged', handleAccountsChanged);
