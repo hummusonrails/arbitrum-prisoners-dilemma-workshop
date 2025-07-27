@@ -3,6 +3,10 @@
 > [!NOTE]
 > Learn game theory and smart contract development on Arbitrum using Stylus (Rust). Build and deploy a multiplayer Prisoner's Dilemma game with strategic decision-making and token staking. All in a preconfigured Codespace!
 
+<div align="center">
+  <img src="screenshot.png" alt="Prisoner's Dilemma Game Screenshot" width="50%">
+</div>
+
 | Learning Outcomes |
 |---|
 | Understand game theory and the Prisoner's Dilemma |
