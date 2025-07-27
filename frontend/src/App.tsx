@@ -8,7 +8,7 @@ import { useWeb3 } from './contexts/Web3Context';
 import { localhost } from './constants';
 import abi from './abi/PrisonersDilemmaContract.json';
 
-const CONTRACT_ADDRESS = '0x1840aeeaf2d22038673f0b651a26895ed01faf1c' as `0x${string}`;
+const CONTRACT_ADDRESS = '0x47cec0749bd110bc11f9577a70061202b1b6c034' as `0x${string}`;
 
 function App() {
   const { publicClient, walletClient, address, isConnected } = useWeb3();
@@ -16,12 +16,13 @@ function App() {
   const [activeGame, setActiveGame] = useState<any | null>(null);
   const [currentView, setCurrentView] = useState<'lobby' | 'game'>('lobby');
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
-  const [gameHistory] = useState<any[]>([]);
+  const [gameHistory, setGameHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [moveLoading, setMoveLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isContractInitialized, setIsContractInitialized] = useState<boolean | null>(null);
   const [initializeLoading, setInitializeLoading] = useState(false);
+
 
   // Check contract initialization
   const checkContractInitialization = useCallback(async () => {
@@ -55,6 +56,7 @@ function App() {
         functionName: 'initialize',
         args: [BigInt('10000000000000000')], // 0.01 ETH in wei
         account: address as `0x${string}`,
+        chain: localhost,
       });
       
       console.log('[App] Initialize transaction hash:', hash);
@@ -160,7 +162,24 @@ function App() {
         console.log('[App] Fetched games:', games);
         setAllGames(games);
         
-        // Check for active game
+        // Update game history with finished games
+        const finishedGames = games.filter(game => game.isFinished && game.result);
+        if (finishedGames.length > 0) {
+          setGameHistory(prevHistory => {
+            const existingIds = new Set(prevHistory.map(g => g.id));
+            const newGames = finishedGames.filter(g => !existingIds.has(g.id)).map(game => ({
+              ...game,
+              result: `${game.result.player1Move} vs ${game.result.player2Move} | P1: ${game.result.player1Payout} ETH, P2: ${game.result.player2Payout} ETH`
+            }));
+            if (newGames.length > 0) {
+              console.log('[App] Adding new finished games to history:', newGames);
+              return [...prevHistory, ...newGames].sort((a, b) => parseInt(b.id) - parseInt(a.id));
+            }
+            return prevHistory;
+          });
+        }
+        
+        // Check for active game and update if it exists
         if (address) {
           try {
             const playerGameId = await publicClient.readContract({
@@ -173,13 +192,38 @@ function App() {
             if (Number(playerGameId) > 0) {
               const activeGameData = games.find(g => g.id === playerGameId.toString());
               if (activeGameData && activeGameData.player2 !== '0x0000000000000000000000000000000000000000') {
-                setActiveGame(activeGameData);
+                setActiveGame((prevActive: any) => {
+                  // Only update if the game state has actually changed
+                  if (!prevActive || prevActive.id !== activeGameData.id || 
+                      prevActive.isFinished !== activeGameData.isFinished ||
+                      prevActive.player1HasMoved !== activeGameData.player1HasMoved ||
+                      prevActive.player2HasMoved !== activeGameData.player2HasMoved) {
+                    console.log('[App] Updating active game:', activeGameData);
+                    return activeGameData;
+                  }
+                  return prevActive;
+                });
+                
+                // If the active game is finished, redirect to lobby after a delay
+                if (activeGameData.isFinished && currentView === 'game') {
+                  console.log('[App] Game finished, redirecting to lobby in 3 seconds...');
+                  setTimeout(() => {
+                    setCurrentView('lobby');
+                    setActiveGame(null);
+                    setSelectedGameId(null);
+                  }, 3000);
+                }
+              } else if (Number(playerGameId) === 0) {
+                // Player has no active game
+                setActiveGame(null);
               }
             }
           } catch (playerGameError) {
             console.error('[App] Error fetching player game:', playerGameError);
           }
         }
+        
+
         return; // Success, exit retry loop
       } catch (error) {
         console.error(`[App] Error fetching game data (attempt ${attempt + 1}):`, error);
@@ -205,6 +249,7 @@ function App() {
         args: [],
         account: address as `0x${string}`,
         value: BigInt(Math.floor(parseFloat(stake) * 1e18)),
+        chain: localhost,
       });
       
       console.log('[App] Create game transaction hash:', hash);
@@ -233,6 +278,7 @@ function App() {
         args: [BigInt(gameId)],
         account: address as `0x${string}`,
         value: BigInt(Math.floor(parseFloat(stake) * 1e18)),
+        chain: localhost,
       });
       
       console.log('[App] Join game transaction hash:', hash);
@@ -260,11 +306,19 @@ function App() {
         functionName: 'submitMove',
         args: [BigInt(activeGame.id), move],
         account: address as `0x${string}`,
+        chain: localhost,
       });
       
       console.log('[App] Submit move transaction hash:', hash);
-      // Wait a bit before fetching to avoid race conditions
-      setTimeout(() => fetchGameData(), 3000);
+      // More aggressive polling after move submission to catch state changes quickly
+      setTimeout(() => {
+        fetchGameData();
+        // Additional polling for the next 15 seconds to catch game completion
+        const pollInterval = setInterval(() => {
+          fetchGameData();
+        }, 2000);
+        setTimeout(() => clearInterval(pollInterval), 15000);
+      }, 2000);
     } catch (error) {
       console.error('[App] Error submitting move:', error);
       setError('Failed to submit move: ' + (error instanceof Error ? error.message : String(error)));
@@ -288,10 +342,12 @@ function App() {
   useEffect(() => {
     if (isContractInitialized && publicClient) {
       fetchGameData();
-      const interval = setInterval(fetchGameData, 3000);
+      // More frequent polling when in an active game to catch state changes quickly
+      const pollInterval = currentView === 'game' && activeGame && !activeGame.isFinished ? 2000 : 5000;
+      const interval = setInterval(fetchGameData, pollInterval);
       return () => clearInterval(interval);
     }
-  }, [isContractInitialized, publicClient, fetchGameData]);
+  }, [isContractInitialized, publicClient, fetchGameData, currentView, activeGame]);
 
   useEffect(() => {
     if (publicClient) {
@@ -311,53 +367,106 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-black to-gray-900 relative overflow-hidden">
+      {/* Prison bars overlay */}
+      <div className="fixed inset-0 pointer-events-none z-10">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-800/20 to-transparent" 
+             style={{
+               backgroundImage: 'repeating-linear-gradient(90deg, transparent 0px, transparent 40px, rgba(75, 85, 99, 0.3) 40px, rgba(75, 85, 99, 0.3) 44px)',
+               animation: 'bars-shadow 3s ease-in-out infinite alternate'
+             }}>
+        </div>
+      </div>
+      
+      <header className="bg-gray-900/95 backdrop-blur-sm shadow-2xl border-b border-red-900/30 relative z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Prisoner's Dilemma DApp
-            </h1>
-            <ConnectWalletButton />
+            <div className="flex items-center space-x-4">
+              <div className="text-6xl animate-pulse">⚖️</div>
+              <div>
+                <h1 className="text-4xl font-bold text-white drop-shadow-lg tracking-wider">
+                  <span className="text-red-400">PRISONER'S</span>{' '}
+                  <span className="text-orange-400">DILEMMA</span>
+                </h1>
+                <p className="text-gray-300 text-sm font-mono tracking-widest opacity-75">
+                  TRUST • BETRAY • SURVIVE
+                </p>
+              </div>
+            </div>
+            <div className="transform hover:scale-105 transition-transform duration-300">
+              <ConnectWalletButton />
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <StatusBanner isConnected={isConnected} address={address || undefined} chain={localhost} />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-20">
+        <div className="mb-6 transform hover:scale-[1.02] transition-all duration-500">
+          <StatusBanner />
+        </div>
         
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
+          <div className="bg-red-900/90 border-2 border-red-500 text-red-200 px-6 py-4 rounded-lg mb-6 shadow-2xl backdrop-blur-sm animate-pulse">
+            <div className="flex items-center space-x-3">
+              <div className="text-2xl">⚠️</div>
+              <div>
+                <div className="font-bold text-red-100">SYSTEM ALERT</div>
+                <div className="font-mono text-sm">{error}</div>
+              </div>
+            </div>
           </div>
         )}
         
         {!isConnected ? (
-          <div className="text-center py-12">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Connect Your Wallet to Play
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300">
-              Connect your wallet to start playing the Prisoner's Dilemma game.
-            </p>
+          <div className="text-center py-16 relative">
+            <div className="bg-gray-900/80 backdrop-blur-sm border-2 border-gray-700 rounded-2xl p-12 shadow-2xl transform hover:scale-105 transition-all duration-700 hover:border-orange-500/50">
+              <div className="text-8xl mb-6 animate-bounce">🔒</div>
+              <h2 className="text-3xl font-bold text-white mb-6 tracking-wider">
+                <span className="text-orange-400">CELL</span> <span className="text-red-400">LOCKED</span>
+              </h2>
+              <p className="text-gray-300 text-lg mb-8 font-mono">
+                Connect your wallet to enter the prison...
+              </p>
+              <div className="border-t border-gray-600 pt-6">
+                <p className="text-gray-400 text-sm">
+                  Only the connected can participate in the dilemma
+                </p>
+              </div>
+            </div>
           </div>
         ) : isContractInitialized === null ? (
-          <div className="text-center py-8">
-            <p className="text-gray-300 mb-4">Checking contract status...</p>
+          <div className="text-center py-12">
+            <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-700 rounded-xl p-8 shadow-2xl">
+              <div className="text-6xl mb-4 animate-spin">⚙️</div>
+              <p className="text-gray-300 mb-4 font-mono tracking-wider">SCANNING PRISON SYSTEMS...</p>
+              <div className="flex justify-center space-x-1">
+                <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
+                <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+                <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+              </div>
+            </div>
           </div>
         ) : !isContractInitialized ? (
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 mb-8 text-center">
-            <h2 className="text-2xl font-bold mb-4">Contract Initialization Required</h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              The Prisoner's Dilemma contract needs to be initialized before you can play.
-              This sets up the minimum stake and prepares the game for players.
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 border-2 border-red-600/50 rounded-2xl shadow-2xl p-8 mb-8 text-center transform hover:scale-[1.02] transition-all duration-500">
+            <div className="text-7xl mb-6 animate-pulse">⚠️</div>
+            <h2 className="text-3xl font-bold text-white mb-4 tracking-wider">
+              <span className="text-red-400">PRISON</span> <span className="text-orange-400">UNINITIALIZED</span>
+            </h2>
+            <p className="text-gray-300 mb-8 text-lg font-mono leading-relaxed">
+              The correctional facility systems require initialization.<br/>
+              <span className="text-orange-300">Establish minimum stakes and prepare the cells...</span>
             </p>
             <button
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded disabled:opacity-50"
+              className="group bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed border-2 border-red-400/50 hover:border-orange-400/70"
               onClick={initializeContract}
               disabled={initializeLoading}
             >
-              {initializeLoading ? 'Initializing...' : 'Initialize Contract'}
+              <div className="flex items-center space-x-3">
+                <div className="text-2xl group-hover:animate-spin">🔑</div>
+                <span className="tracking-wider">
+                  {initializeLoading ? 'INITIALIZING SYSTEMS...' : 'INITIALIZE PRISON'}
+                </span>
+              </div>
             </button>
           </div>
         ) : currentView === 'lobby' ? (
@@ -373,12 +482,13 @@ function App() {
           </div>
         ) : currentView === 'game' && selectedGameId ? (
           <div>
-            <div className="mb-4">
+            <div className="mb-6">
               <button
-                className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
+                className="bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700 text-white font-bold px-6 py-3 rounded-lg shadow-lg border border-gray-500/50 transition-all duration-300 transform hover:scale-105 relative z-30 flex items-center space-x-2"
                 onClick={() => setCurrentView('lobby')}
               >
-                ← Back to Lobby
+                <span className="text-lg">←</span>
+                <span>Back to Lobby</span>
               </button>
             </div>
             <GameBoard
@@ -391,7 +501,7 @@ function App() {
           </div>
         ) : (
           <div className="text-center py-8">
-            <p className="text-gray-500">No game selected</p>
+            <p className="text-gray-300">No game selected</p>
             <button
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded mt-4"
               onClick={() => setCurrentView('lobby')}

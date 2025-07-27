@@ -31,6 +31,7 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
   const [address, setAddress] = useState<string | null>(null);
   const [chainId, setChainId] = useState<number | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
   const connect = async () => {
     if (!(window as any).ethereum) {
@@ -69,6 +70,58 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
     setPublicClient(null);
     setChainId(null);
   };
+
+  // Check for existing wallet connection on page load
+  React.useEffect(() => {
+    const checkExistingConnection = async () => {
+      if (!(window as any).ethereum || isInitialized) return;
+      
+      try {
+        // Check if already connected
+        const accounts = await (window as any).ethereum.request({ 
+          method: 'eth_accounts' 
+        });
+        
+        if (accounts.length > 0) {
+          console.log('[Web3Provider] Found existing wallet connection, reconnecting...');
+          await connect();
+        }
+      } catch (error) {
+        console.error('[Web3Provider] Error checking existing connection:', error);
+      } finally {
+        setIsInitialized(true);
+      }
+    };
+    
+    checkExistingConnection();
+  }, [isInitialized]);
+
+  // Listen for account changes
+  React.useEffect(() => {
+    if (!(window as any).ethereum) return;
+    
+    const handleAccountsChanged = (accounts: string[]) => {
+      console.log('[Web3Provider] Accounts changed:', accounts);
+      if (accounts.length === 0) {
+        disconnect();
+      } else if (accounts[0] !== address) {
+        connect();
+      }
+    };
+    
+    const handleChainChanged = () => {
+      console.log('[Web3Provider] Chain changed, reconnecting...');
+      connect();
+    };
+    
+    (window as any).ethereum.on('accountsChanged', handleAccountsChanged);
+    (window as any).ethereum.on('chainChanged', handleChainChanged);
+    
+    return () => {
+      (window as any).ethereum?.removeListener('accountsChanged', handleAccountsChanged);
+      (window as any).ethereum?.removeListener('chainChanged', handleChainChanged);
+    };
+  }, [address]);
 
   // Debug logs for context propagation
   React.useEffect(() => {
