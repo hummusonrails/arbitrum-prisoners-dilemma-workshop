@@ -26,20 +26,33 @@
   50% { opacity: 0.7; }
 }
 
-.cell-hover:hover {
-  animation: cell-glow 2s ease-in-out infinite;
+/* Animations for users who don't prefer reduced motion */
+@media (prefers-reduced-motion: no-preference) {
+  .cell-hover:hover {
+    animation: cell-glow 2s ease-in-out infinite;
+  }
+
+  .tension-card {
+    animation: tension-pulse 3s ease-in-out infinite;
+  }
+
+  .choice-card {
+    animation: choice-reveal 0.8s ease-out;
+  }
+
+  .prison-text {
+    animation: prison-flicker 4s ease-in-out infinite;
+  }
 }
 
-.tension-card {
-  animation: tension-pulse 3s ease-in-out infinite;
-}
-
-.choice-card {
-  animation: choice-reveal 0.8s ease-out;
-}
-
-.prison-text {
-  animation: prison-flicker 4s ease-in-out infinite;
+/* Disable animations for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .cell-hover:hover,
+  .tension-card,
+  .choice-card,
+  .prison-text {
+    animation: none;
+  }
 }
 
 :root {
