@@ -7,8 +7,8 @@
 }
 
 @keyframes cell-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(251, 146, 60, 0.3); }
-  50% { box-shadow: 0 0 40px rgba(251, 146, 60, 0.6), 0 0 60px rgba(239, 68, 68, 0.3); }
+  0%, 100% { filter: drop-shadow(0 0 20px rgba(251, 146, 60, 0.3)); }
+  50% { filter: drop-shadow(0 0 40px rgba(251, 146, 60, 0.6)) drop-shadow(0 0 60px rgba(239, 68, 68, 0.3)); }
 }
 
 @keyframes tension-pulse {
@@ -29,6 +29,7 @@
 /* Animations for users who don't prefer reduced motion */
 @media (prefers-reduced-motion: no-preference) {
   .cell-hover:hover {
+    will-change: filter;
     animation: cell-glow 2s ease-in-out infinite;
   }
 
