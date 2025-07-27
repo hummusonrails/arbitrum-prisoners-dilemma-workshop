@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <defs>
+    <linearGradient id="barGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#4a5568;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#718096;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4a5568;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="shadowGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a202c;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#1a202c;stop-opacity:0.3" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="32" height="32" fill="#2d3748" rx="2"/>
+  
+  <!-- Prison bars -->
+  <rect x="4" y="4" width="2" height="24" fill="url(#barGradient)" rx="1"/>
+  <rect x="8" y="4" width="2" height="24" fill="url(#barGradient)" rx="1"/>
+  <rect x="12" y="4" width="2" height="24" fill="url(#barGradient)" rx="1"/>
+  <rect x="16" y="4" width="2" height="24" fill="url(#barGradient)" rx="1"/>
+  <rect x="20" y="4" width="2" height="24" fill="url(#barGradient)" rx="1"/>
+  <rect x="24" y="4" width="2" height="24" fill="url(#barGradient)" rx="1"/>
+  <rect x="28" y="4" width="2" height="24" fill="url(#barGradient)" rx="1"/>
+  
+  <!-- Horizontal bars -->
+  <rect x="3" y="8" width="26" height="1.5" fill="url(#barGradient)" rx="0.75"/>
+  <rect x="3" y="22" width="26" height="1.5" fill="url(#barGradient)" rx="0.75"/>
+  
+  <!-- Shadow effects -->
+  <rect x="5" y="4" width="1" height="24" fill="url(#shadowGradient)" opacity="0.6"/>
+  <rect x="9" y="4" width="1" height="24" fill="url(#shadowGradient)" opacity="0.6"/>
+  <rect x="13" y="4" width="1" height="24" fill="url(#shadowGradient)" opacity="0.6"/>
+  <rect x="17" y="4" width="1" height="24" fill="url(#shadowGradient)" opacity="0.6"/>
+  <rect x="21" y="4" width="1" height="24" fill="url(#shadowGradient)" opacity="0.6"/>
+  <rect x="25" y="4" width="1" height="24" fill="url(#shadowGradient)" opacity="0.6"/>
+  <rect x="29" y="4" width="1" height="24" fill="url(#shadowGradient)" opacity="0.6"/>
+  
+  <!-- Subtle highlight on bars -->
+  <rect x="4.2" y="4" width="0.6" height="24" fill="#a0aec0" opacity="0.4" rx="0.3"/>
+  <rect x="8.2" y="4" width="0.6" height="24" fill="#a0aec0" opacity="0.4" rx="0.3"/>
+  <rect x="12.2" y="4" width="0.6" height="24" fill="#a0aec0" opacity="0.4" rx="0.3"/>
+  <rect x="16.2" y="4" width="0.6" height="24" fill="#a0aec0" opacity="0.4" rx="0.3"/>
+  <rect x="20.2" y="4" width="0.6" height="24" fill="#a0aec0" opacity="0.4" rx="0.3"/>
+  <rect x="24.2" y="4" width="0.6" height="24" fill="#a0aec0" opacity="0.4" rx="0.3"/>
+  <rect x="28.2" y="4" width="0.6" height="24" fill="#a0aec0" opacity="0.4" rx="0.3"/>
+</svg>

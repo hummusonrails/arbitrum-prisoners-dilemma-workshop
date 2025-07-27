@@ -30,13 +30,13 @@ const GameBoard: React.FC<GameBoardProps> = ({ game, address, onMove, moveLoadin
   const canMove = !game.isFinished && (isPlayer1 || isPlayer2) && !hasMoved;
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 mb-8">
-      <h2 className="text-2xl font-bold mb-4">Game Board</h2>
-      <div className="mb-2">Stake: <span className="font-mono">{game.stake} ETH</span></div>
-      <div className="mb-2">Player 1: <span className="font-mono">{game.player1.slice(0, 6)}...{game.player1.slice(-4)}</span></div>
-      <div className="mb-2">Player 2: <span className="font-mono">{game.player2.slice(0, 6)}...{game.player2.slice(-4)}</span></div>
-      <div className="mb-2">Your role: <span className="font-semibold">{isPlayer1 ? 'Player 1' : isPlayer2 ? 'Player 2' : 'Spectator'}</span></div>
-      <div className="mb-4">Game status: <span className="font-semibold">{game.isFinished ? 'Finished' : 'In Progress'}</span></div>
+    <div className="bg-gray-900 rounded-lg shadow-lg p-6 mb-8">
+      <h2 className="text-2xl font-bold text-white mb-4">Game Board</h2>
+      <div className="mb-2 text-gray-300">Stake: <span className="font-mono text-white">{game.stake} ETH</span></div>
+      <div className="mb-2 text-gray-300">Player 1: <span className="font-mono text-white">{game.player1.slice(0, 6)}...{game.player1.slice(-4)}</span></div>
+      <div className="mb-2 text-gray-300">Player 2: <span className="font-mono text-white">{game.player2.slice(0, 6)}...{game.player2.slice(-4)}</span></div>
+      <div className="mb-2 text-gray-300">Your role: <span className="font-semibold text-white">{isPlayer1 ? 'Player 1' : isPlayer2 ? 'Player 2' : 'Spectator'}</span></div>
+      <div className="mb-4 text-gray-300">Game status: <span className="font-semibold text-white">{game.isFinished ? 'Finished' : 'In Progress'}</span></div>
       {!game.isFinished && canMove && (
         <MoveButtons onMove={onMove} disabled={moveLoading} />
       )}

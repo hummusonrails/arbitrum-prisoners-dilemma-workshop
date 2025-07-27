@@ -1,5 +1,61 @@
 @import "tailwindcss";
 
+/* Custom Prison-themed Animations */
+@keyframes bars-shadow {
+  0% { opacity: 0.1; }
+  100% { opacity: 0.4; }
+}
+
+@keyframes cell-glow {
+  0%, 100% { filter: drop-shadow(0 0 20px rgba(251, 146, 60, 0.3)); }
+  50% { filter: drop-shadow(0 0 40px rgba(251, 146, 60, 0.6)) drop-shadow(0 0 60px rgba(239, 68, 68, 0.3)); }
+}
+
+@keyframes tension-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+@keyframes choice-reveal {
+  0% { opacity: 0; transform: rotateY(-90deg); }
+  100% { opacity: 1; transform: rotateY(0deg); }
+}
+
+@keyframes prison-flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Animations for users who don't prefer reduced motion */
+@media (prefers-reduced-motion: no-preference) {
+  .cell-hover:hover {
+    will-change: filter;
+    animation: cell-glow 2s ease-in-out infinite;
+  }
+
+  .tension-card {
+    animation: tension-pulse 3s ease-in-out infinite;
+  }
+
+  .choice-card {
+    animation: choice-reveal 0.8s ease-out;
+  }
+
+  .prison-text {
+    animation: prison-flicker 4s ease-in-out infinite;
+  }
+}
+
+/* Disable animations for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .cell-hover:hover,
+  .tension-card,
+  .choice-card,
+  .prison-text {
+    animation: none;
+  }
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
