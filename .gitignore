@@ -23,3 +23,5 @@ frontend/*.sw?
 
 contracts/prisoners-dilemma/target
 contracts/prisoners-dilemma/.env
+
+.DS_Store
