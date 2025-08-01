@@ -187,8 +187,11 @@ export default function App() {
             const player2Payout = roundData[3] || BigInt(0);
             
             // Skip if this looks like default/empty data from contract
-            // Real rounds should have non-zero payouts or be explicitly marked as finished
-            if (player1Payout > BigInt(0) || player2Payout > BigInt(0)) {
+            // Real rounds should have moves submitted, be finished, or have non-zero payouts
+            const isFinished = roundData[4] || false; // is_finished flag from contract
+            const hasValidMoves = roundData[0] !== null && roundData[1] !== null;
+            
+            if (hasValidMoves || isFinished || player1Payout > BigInt(0) || player2Payout > BigInt(0)) {
               cell.rounds.push({
                 roundNumber: i,
                 player1Move: roundData[0] !== null ? Number(roundData[0]) : null,
@@ -299,7 +302,7 @@ export default function App() {
         functionName: 'createCell',
         args: [],
         account: address as `0x${string}`,
-        value: BigInt(Math.floor(parseFloat(stake) * 1e18)),
+        value: parseEther(stake),
         chain: localhost,
       });
       
@@ -327,7 +330,7 @@ export default function App() {
         functionName: 'joinCell',
         args: [BigInt(cellId)],
         account: address as `0x${string}`,
-        value: BigInt(Math.floor(parseFloat(stake) * 1e18)),
+        value: parseEther(stake),
         chain: localhost,
       });
       

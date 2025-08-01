@@ -22,9 +22,9 @@ export class CellManagerImpl implements CellManager {
   createCell(player1: string, player2: string, stake: string): Cell {
     const cellId = this.createCellId(player1, player2);
     
-    // Check if cell already exists
+    // Check if cell already exists with matching stake
     const existingCell = this.cells.get(cellId);
-    if (existingCell && !existingCell.isComplete) {
+    if (existingCell && !existingCell.isComplete && existingCell.stake === stake) {
       return existingCell;
     }
 

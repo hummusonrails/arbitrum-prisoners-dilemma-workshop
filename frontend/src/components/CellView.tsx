@@ -392,7 +392,7 @@ const CellView: React.FC<CellViewProps> = ({
               >
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-lg font-semibold text-white">
-                    Round {round.roundNumber}
+                    Round {round.roundNumber + 1}
                   </h3>
                   <div className="text-2xl">
                     {getOutcomeIcon(round.player1Move, round.player2Move)}
