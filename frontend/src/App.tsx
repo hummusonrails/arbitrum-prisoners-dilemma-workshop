@@ -1,47 +1,50 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import ConnectWalletButton from './components/ConnectWalletButton';
-import StatusBanner from './components/StatusBanner';
-import GameLobby from './components/GameLobby';
-import GameBoard from './components/GameBoard';
-import GameHistory from './components/GameHistory';
-import Footer from './components/Footer';
+import { useState, useEffect, useCallback } from 'react';
+import { ConnectWalletButton, StatusBanner, GameLobby, CellView, GameHistory, Footer } from './components';
 import { useWeb3 } from './contexts/Web3Context';
+import { parseEther } from 'viem';
 import { localhost } from './constants';
 import abi from './abi/PrisonersDilemmaContract.json';
 
-const CONTRACT_ADDRESS = '0x47cec0749bd110bc11f9577a70061202b1b6c034' as `0x${string}`;
+const CONTRACT_ADDRESS = '0xd542490eba60e4b4d28d23c5b392b1607438f3cc' as const;
 
-function App() {
-  const { publicClient, walletClient, address, isConnected } = useWeb3();
-  const [allGames, setAllGames] = useState<any[]>([]);
-  const [activeGame, setActiveGame] = useState<any | null>(null);
-  const [currentView, setCurrentView] = useState<'lobby' | 'game'>('lobby');
-  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
-  const [gameHistory, setGameHistory] = useState<any[]>([]);
+interface Cell {
+  id: string;
+  player1: string;
+  player2: string;
+  stake: bigint;
+  totalRounds: number;
+  currentRound: number;
+  isComplete: boolean;
+  rounds: Round[];
+}
+
+interface Round {
+  roundNumber: number;
+  player1Move: number | null;
+  player2Move: number | null;
+  player1Payout: bigint;
+  player2Payout: bigint;
+  isComplete: boolean;
+}
+
+type ViewType = 'lobby' | 'cell' | 'history';
+
+export default function App() {
+  const { address, isConnected, walletClient, publicClient } = useWeb3();
+
+  // State variables
+  const [cells, setCells] = useState<Cell[]>([]);
+  const [activeCell, setActiveCell] = useState<Cell | null>(null);
+  const [selectedCellId, setSelectedCellId] = useState<string | null>(null);
+  const [cellHistory, setCellHistory] = useState<Cell[]>([]);
   const [loading, setLoading] = useState(false);
   const [moveLoading, setMoveLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isContractInitialized, setIsContractInitialized] = useState<boolean | null>(null);
+  const [currentView, setCurrentView] = useState<ViewType>('lobby');
   const [initializeLoading, setInitializeLoading] = useState(false);
-
-
-  // Check contract initialization
-  const checkContractInitialization = useCallback(async () => {
-    if (!publicClient) return;
-    
-    try {
-      const minStake = await publicClient.readContract({
-        address: CONTRACT_ADDRESS,
-        abi,
-        functionName: 'getMinStake',
-      }) as bigint;
-      
-      setIsContractInitialized(Number(minStake) > 0);
-    } catch (error) {
-      console.error('[App] Error checking contract initialization:', error);
-      setIsContractInitialized(false);
-    }
-  }, [publicClient]);
+  const [isContractInitialized, setIsContractInitialized] = useState(false);
+  const [isPolling, setIsPolling] = useState(false);
+  const [minStake, setMinStake] = useState<bigint>(BigInt(0));
 
   // Initialize contract
   const initializeContract = async () => {
@@ -51,17 +54,16 @@ function App() {
       setInitializeLoading(true);
       setError(null);
       
-      const hash = await walletClient.writeContract({
+      const result = await walletClient.writeContract({
         address: CONTRACT_ADDRESS,
         abi,
         functionName: 'initialize',
-        args: [BigInt('10000000000000000')], // 0.01 ETH in wei
-        account: address as `0x${string}`,
+        args: [parseEther('0.01')],
         chain: localhost,
+        account: address as `0x${string}`,
       });
       
-      console.log('[App] Initialize transaction hash:', hash);
-      await checkContractInitialization();
+      console.log('[App] Initialize contract transaction hash:', result);
     } catch (error) {
       console.error('[App] Error initializing contract:', error);
       setError('Failed to initialize contract: ' + (error instanceof Error ? error.message : String(error)));
@@ -70,173 +72,221 @@ function App() {
     }
   };
 
-  // Fetch game result for finished games with retry logic
-  const fetchGameResult = async (gameId: string, retries = 2) => {
-    if (!publicClient) return null;
+  // Check if contract is initialized
+  const checkContractInitialization = async () => {
+    if (!publicClient) return false;
     
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      try {
-        const resultData = await publicClient.readContract({
-          address: CONTRACT_ADDRESS,
-          abi,
-          functionName: 'getGameResult',
-          args: [BigInt(gameId)],
-        }) as [number, number, bigint, bigint];
-
-        const [player1Move, player2Move, player1Payout, player2Payout] = resultData;
-        
-        // Check if we got valid data (not default zeros for unfinished games)
-        if (player1Payout === 0n && player2Payout === 0n) {
-          return null; // Game not finished yet
-        }
-        
-        return {
-          player1Move: player1Move === 0 ? 'Cooperate' : 'Defect',
-          player2Move: player2Move === 0 ? 'Cooperate' : 'Defect',
-          player1Payout: (Number(player1Payout) / 1e18).toFixed(4),
-          player2Payout: (Number(player2Payout) / 1e18).toFixed(4),
-        };
-      } catch (error) {
-        console.error(`[App] Error fetching game result (attempt ${attempt + 1}):`, error);
-        if (attempt < retries) {
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
-        }
+    try {
+      console.log('[App] Checking contract initialization...');
+      console.log('[App] Contract address:', CONTRACT_ADDRESS);
+      
+      // Force fresh blockchain read to avoid stale state
+      const latestBlock = await publicClient.getBlockNumber();
+      console.log('[App] Reading from latest block:', latestBlock);
+      
+      // Check if contract is initialized by checking if owner is set
+      // In an uninitialized contract, owner should be Address::ZERO (0x0000...)
+      const ownerResult = await publicClient.readContract({
+        address: CONTRACT_ADDRESS,
+        abi,
+        functionName: 'getOwner',
+        args: [],
+        blockNumber: latestBlock,
+      });
+      
+      console.log('[App] Owner result:', ownerResult);
+      
+      // If owner is zero address, the contract is not initialized
+      const isInitialized = ownerResult !== '0x0000000000000000000000000000000000000000';
+      
+      if (!isInitialized) {
+        console.log('[App] Contract not initialized - owner is zero address');
+        setIsContractInitialized(false);
+        setMinStake(BigInt(0));
+        return false;
       }
+      
+      // Contract is initialized, now get the min stake
+      const minStakeResult = await publicClient.readContract({
+        address: CONTRACT_ADDRESS,
+        abi,
+        functionName: 'getMinStake',
+        args: [],
+        blockNumber: latestBlock,
+      });
+      
+      console.log('[App] Contract is initialized, owner:', ownerResult, 'min stake:', minStakeResult);
+      setMinStake(minStakeResult as bigint);
+      setIsContractInitialized(true);
+      setError(null);
+      return true;
+    } catch (error) {
+      console.error('[App] DETAILED ERROR checking contract initialization:');
+      console.error('[App] Error type:', typeof error);
+      console.error('[App] Error message:', error instanceof Error ? error.message : String(error));
+      console.error('[App] Full error object:', error);
+      console.error('[App] Contract address being called:', CONTRACT_ADDRESS);
+      console.error('[App] Public client available:', !!publicClient);
+      console.error('[App] ABI available:', !!abi);
+      setIsContractInitialized(false);
+      return false;
     }
-    return null;
   };
 
-  // Fetch game data with error handling and retry logic
-  const fetchGameData = useCallback(async (retries = 2) => {
-    if (!publicClient || !isContractInitialized) return;
+  // Fetch cell data from contract
+  const fetchCellData = async (cellId: string): Promise<Cell | null> => {
+    if (!publicClient) return null;
     
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      try {
-        console.log(`[App] Fetching game data... (attempt ${attempt + 1})`);
-        const gameCounter = await publicClient.readContract({
-          address: CONTRACT_ADDRESS,
-          abi,
-          functionName: 'getGameCounter',
-        }) as bigint;
-
-        const games = [];
-        for (let i = 1; i <= Number(gameCounter); i++) {
-          try {
-            const gameData = await publicClient.readContract({
-              address: CONTRACT_ADDRESS,
-              abi,
-              functionName: 'getGame',
-              args: [BigInt(i)],
-            }) as [string, string, bigint, boolean, boolean, boolean];
-
-            const [player1, player2, stake, player1HasMoved, player2HasMoved, isFinished] = gameData;
+    try {
+      const latestBlock = await publicClient.getBlockNumber();
+      
+      const cellData = await publicClient.readContract({
+        address: CONTRACT_ADDRESS,
+        abi,
+        functionName: 'getCell',
+        args: [BigInt(cellId)],
+        blockNumber: latestBlock,
+      }) as any[];
+      
+      if (!cellData || cellData.length === 0) return null;
+      
+      // Parse cell data according to contract structure
+      const cell: Cell = {
+        id: cellId,
+        player1: cellData[0],
+        player2: cellData[1],
+        stake: cellData[2],
+        totalRounds: Number(cellData[3]),
+        currentRound: Number(cellData[4]),
+        isComplete: cellData[5],
+        rounds: []
+      };
+      
+      console.log(`[App] Fetched cell ${cellId}:`, {
+        totalRounds: cell.totalRounds,
+        currentRound: cell.currentRound,
+        isComplete: cell.isComplete,
+        rawData: cellData
+      });
+      
+      // Fetch round data for each round
+      for (let i = 1; i <= cell.currentRound; i++) {
+        try {
+          const roundData = await publicClient.readContract({
+            address: CONTRACT_ADDRESS,
+            abi,
+            functionName: 'getRoundResult',
+            args: [BigInt(cellId), BigInt(i)],
+            blockNumber: latestBlock,
+          }) as any[];
+          
+          // Only add round data if it represents a real completed round
+          // Contract returns (0, 0, 0, 0) for non-existent rounds
+          if (roundData && roundData.length > 0) {
+            const player1Payout = roundData[2] || BigInt(0);
+            const player2Payout = roundData[3] || BigInt(0);
             
-            const game: any = {
-              id: i.toString(),
-              player1,
-              player2,
-              stake: (Number(stake) / 1e18).toFixed(4),
-              player1HasMoved,
-              player2HasMoved,
-              isFinished,
-              isOpen: player2 === '0x0000000000000000000000000000000000000000',
-              isFull: player2 !== '0x0000000000000000000000000000000000000000' && !isFinished,
-              status: isFinished ? 'finished' : 
-                      player2 === '0x0000000000000000000000000000000000000000' ? 'open' : 'full'
-            };
-            
-            // Fetch result data for finished games only
-            if (isFinished) {
-              const result = await fetchGameResult(i.toString());
-              if (result) {
-                game.result = result;
-              }
+            // Skip if this looks like default/empty data from contract
+            // Real rounds should have non-zero payouts or be explicitly marked as finished
+            if (player1Payout > BigInt(0) || player2Payout > BigInt(0)) {
+              cell.rounds.push({
+                roundNumber: i,
+                player1Move: roundData[0] !== null ? Number(roundData[0]) : null,
+                player2Move: roundData[1] !== null ? Number(roundData[1]) : null,
+                player1Payout: player1Payout,
+                player2Payout: player2Payout,
+                isComplete: true
+              });
             }
-            
-            games.push(game);
-          } catch (gameError) {
-            console.error(`[App] Error fetching game ${i}:`, gameError);
-            // Skip this game and continue with others
           }
-        }
-
-        console.log('[App] Fetched games:', games);
-        setAllGames(games);
-        
-        // Update game history with finished games
-        const finishedGames = games.filter(game => game.isFinished && game.result);
-        if (finishedGames.length > 0) {
-          setGameHistory(prevHistory => {
-            const existingIds = new Set(prevHistory.map(g => g.id));
-            const newGames = finishedGames.filter(g => !existingIds.has(g.id)).map(game => ({
-              ...game,
-              result: `${game.result.player1Move} vs ${game.result.player2Move} | P1: ${game.result.player1Payout} ETH, P2: ${game.result.player2Payout} ETH`
-            }));
-            if (newGames.length > 0) {
-              console.log('[App] Adding new finished games to history:', newGames);
-              return [...prevHistory, ...newGames].sort((a, b) => parseInt(b.id) - parseInt(a.id));
-            }
-            return prevHistory;
-          });
-        }
-        
-        // Check for active game and update if it exists
-        if (address) {
-          try {
-            const playerGameId = await publicClient.readContract({
-              address: CONTRACT_ADDRESS,
-              abi,
-              functionName: 'getPlayerGame',
-              args: [address],
-            }) as bigint;
-            
-            if (Number(playerGameId) > 0) {
-              const activeGameData = games.find(g => g.id === playerGameId.toString());
-              if (activeGameData && activeGameData.player2 !== '0x0000000000000000000000000000000000000000') {
-                setActiveGame((prevActive: any) => {
-                  // Only update if the game state has actually changed
-                  if (!prevActive || prevActive.id !== activeGameData.id || 
-                      prevActive.isFinished !== activeGameData.isFinished ||
-                      prevActive.player1HasMoved !== activeGameData.player1HasMoved ||
-                      prevActive.player2HasMoved !== activeGameData.player2HasMoved) {
-                    console.log('[App] Updating active game:', activeGameData);
-                    return activeGameData;
-                  }
-                  return prevActive;
-                });
-                
-                // If the active game is finished, redirect to lobby after a delay
-                if (activeGameData.isFinished && currentView === 'game') {
-                  console.log('[App] Game finished, redirecting to lobby in 3 seconds...');
-                  setTimeout(() => {
-                    setCurrentView('lobby');
-                    setActiveGame(null);
-                    setSelectedGameId(null);
-                  }, 3000);
-                }
-              } else if (Number(playerGameId) === 0) {
-                // Player has no active game
-                setActiveGame(null);
-              }
-            }
-          } catch (playerGameError) {
-            console.error('[App] Error fetching player game:', playerGameError);
-          }
-        }
-        
-
-        return; // Success, exit retry loop
-      } catch (error) {
-        console.error(`[App] Error fetching game data (attempt ${attempt + 1}):`, error);
-        if (attempt < retries) {
-          await new Promise(resolve => setTimeout(resolve, 1500)); // Wait 1.5s before retry
+        } catch (roundError) {
+          console.warn(`[App] Could not fetch round ${i} for cell ${cellId}:`, roundError);
         }
       }
+      
+      return cell;
+    } catch (error) {
+      console.error('[App] Error fetching cell data:', error);
+      return null;
     }
-  }, [publicClient, isContractInitialized, address]);
+  };
 
-  // Create game
-  const handleCreateGame = async (stake: string) => {
+  // Update cells state by fetching from contract
+  const updateCellsState = async () => {
+    if (!publicClient || !isContractInitialized) return;
+    
+    try {
+      const latestBlock = await publicClient.getBlockNumber();
+      
+      // Get total number of cells
+      const cellCounter = await publicClient.readContract({
+        address: CONTRACT_ADDRESS,
+        abi,
+        functionName: 'getCellCounter',
+        args: [],
+        blockNumber: latestBlock,
+      }) as bigint;
+      
+      const cellCount = Number(cellCounter);
+      const newCells: Cell[] = [];
+      
+      // Fetch each cell
+      for (let i = 1; i <= cellCount; i++) {
+        const cell = await fetchCellData(i.toString());
+        if (cell) {
+          newCells.push(cell);
+        }
+      }
+      
+      setCells(newCells);
+      
+      // Update active cell if one is selected
+      if (selectedCellId) {
+        const updatedActiveCell = newCells.find(c => c.id === selectedCellId);
+        if (updatedActiveCell) {
+          setActiveCell(updatedActiveCell);
+        }
+      }
+      
+      // Update cell history with completed cells
+      const completedCells = newCells.filter(c => c.isComplete);
+      setCellHistory(completedCells);
+      
+    } catch (error) {
+      console.error('[App] Error updating cells state:', error);
+    }
+  };
+
+  // Polling for updates
+  const pollForCellUpdates = useCallback((maxPolls: number = 10) => {
+    if (isPolling) return;
+    
+    setIsPolling(true);
+    let pollCount = 0;
+    
+    const pollInterval = setInterval(async () => {
+      pollCount++;
+      console.log(`[App] Polling for updates (${pollCount}/${maxPolls})`);
+      
+      if (publicClient && isContractInitialized) {
+        await updateCellsState();
+      }
+      
+      if (pollCount >= maxPolls) {
+        clearInterval(pollInterval);
+        setIsPolling(false);
+      }
+    }, 2000);
+    
+    // Cleanup function
+    return () => {
+      clearInterval(pollInterval);
+      setIsPolling(false);
+    };
+  }, [publicClient, isContractInitialized, isPolling]);
+
+  // Create new cell
+  const handleCreateCell = async (stake: string) => {
     if (!walletClient || !address) return;
     
     try {
@@ -246,26 +296,25 @@ function App() {
       const hash = await walletClient.writeContract({
         address: CONTRACT_ADDRESS,
         abi,
-        functionName: 'createGame',
+        functionName: 'createCell',
         args: [],
         account: address as `0x${string}`,
         value: BigInt(Math.floor(parseFloat(stake) * 1e18)),
         chain: localhost,
       });
       
-      console.log('[App] Create game transaction hash:', hash);
-      // Wait a bit before fetching to avoid race conditions
-      setTimeout(() => fetchGameData(), 3000);
+      console.log('[App] Create cell transaction hash:', hash);
+      pollForCellUpdates(5);
     } catch (error) {
-      console.error('[App] Error creating game:', error);
-      setError('Failed to create game: ' + (error instanceof Error ? error.message : String(error)));
+      console.error('[App] Error creating cell:', error);
+      setError('Failed to create cell: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setLoading(false);
     }
   };
 
-  // Join game
-  const handleJoinGame = async (gameId: string, stake: string) => {
+  // Join existing cell
+  const handleJoinCell = async (cellId: string, stake: string) => {
     if (!walletClient || !address) return;
     
     try {
@@ -275,27 +324,26 @@ function App() {
       const hash = await walletClient.writeContract({
         address: CONTRACT_ADDRESS,
         abi,
-        functionName: 'joinGame',
-        args: [BigInt(gameId)],
+        functionName: 'joinCell',
+        args: [BigInt(cellId)],
         account: address as `0x${string}`,
         value: BigInt(Math.floor(parseFloat(stake) * 1e18)),
         chain: localhost,
       });
       
-      console.log('[App] Join game transaction hash:', hash);
-      // Wait a bit before fetching to avoid race conditions
-      setTimeout(() => fetchGameData(), 3000);
+      console.log('[App] Join cell transaction hash:', hash);
+      pollForCellUpdates(5);
     } catch (error) {
-      console.error('[App] Error joining game:', error);
-      setError('Failed to join game: ' + (error instanceof Error ? error.message : String(error)));
+      console.error('[App] Error joining cell:', error);
+      setError('Failed to join cell: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setLoading(false);
     }
   };
 
-  // Submit move
-  const handleMove = async (move: 0 | 1) => {
-    if (!walletClient || !address || !activeGame) return;
+  // Submit move for current round
+  const handleMove = async (cellId: string, move: number) => {
+    if (!walletClient || !address) return;
     
     try {
       setMoveLoading(true);
@@ -305,21 +353,13 @@ function App() {
         address: CONTRACT_ADDRESS,
         abi,
         functionName: 'submitMove',
-        args: [BigInt(activeGame.id), move],
+        args: [BigInt(cellId), BigInt(move)],
         account: address as `0x${string}`,
         chain: localhost,
       });
       
       console.log('[App] Submit move transaction hash:', hash);
-      // More aggressive polling after move submission to catch state changes quickly
-      setTimeout(() => {
-        fetchGameData();
-        // Additional polling for the next 15 seconds to catch game completion
-        const pollInterval = setInterval(() => {
-          fetchGameData();
-        }, 2000);
-        setTimeout(() => clearInterval(pollInterval), 15000);
-      }, 2000);
+      pollForCellUpdates(5);
     } catch (error) {
       console.error('[App] Error submitting move:', error);
       setError('Failed to submit move: ' + (error instanceof Error ? error.message : String(error)));
@@ -328,194 +368,279 @@ function App() {
     }
   };
 
-  // Effects
-  useEffect(() => {
-    if (!isConnected) {
-      setAllGames([]);
-      setActiveGame(null);
-      setIsContractInitialized(null);
-    }
-    if (isConnected && publicClient) {
-      checkContractInitialization();
-    }
-  }, [isConnected, publicClient, checkContractInitialization]);
-
-  useEffect(() => {
-    if (isContractInitialized && publicClient) {
-      fetchGameData();
-      // More frequent polling when in an active game to catch state changes quickly
-      const pollInterval = currentView === 'game' && activeGame && !activeGame.isFinished ? 2000 : 5000;
-      const interval = setInterval(fetchGameData, pollInterval);
-      return () => clearInterval(interval);
-    }
-  }, [isContractInitialized, publicClient, fetchGameData, currentView, activeGame]);
-
-  useEffect(() => {
-    if (publicClient) {
-      const interval = setInterval(checkContractInitialization, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [publicClient, checkContractInitialization]);
-
-  // Handle game selection for navigation
-  const handleEnterGame = (gameId: string) => {
-    const game = allGames.find(g => g.id === gameId);
-    if (game) {
-      setActiveGame(game);
-      setSelectedGameId(gameId);
-      setCurrentView('game');
+  // Submit continuation decision
+  const handleContinuationDecision = async (cellId: string, wantsToContinue: boolean) => {
+    if (!walletClient || !address) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const hash = await walletClient.writeContract({
+        address: CONTRACT_ADDRESS,
+        abi,
+        functionName: 'submitContinuationDecision',
+        args: [BigInt(cellId), wantsToContinue],
+        account: address as `0x${string}`,
+        chain: localhost,
+      });
+      
+      console.log('[App] Submit continuation decision transaction hash:', hash);
+      pollForCellUpdates(5);
+    } catch (error) {
+      console.error('[App] Error submitting continuation decision:', error);
+      setError('Failed to submit continuation decision: ' + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-black to-gray-900 relative overflow-hidden">
-      {/* Prison bars overlay */}
-      <div className="fixed inset-0 pointer-events-none z-10">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-800/20 to-transparent" 
-             style={{
-               backgroundImage: 'repeating-linear-gradient(90deg, transparent 0px, transparent 40px, rgba(75, 85, 99, 0.3) 40px, rgba(75, 85, 99, 0.3) 44px)',
-               animation: 'bars-shadow 3s ease-in-out infinite alternate'
-             }}>
-        </div>
-      </div>
+  // Navigation handlers
+  const handleEnterCell = (cellId: string) => {
+    console.log('[App] handleEnterCell called with cellId:', cellId);
+    console.log('[App] Available cells:', cells.map(c => ({ id: c.id, totalRounds: c.totalRounds, currentRound: c.currentRound, isComplete: c.isComplete })));
+    
+    setSelectedCellId(cellId);
+    setCurrentView('cell');
+    const cell = cells.find(c => c.id === cellId);
+    if (cell) {
+      console.log('[App] Found cell:', { id: cell.id, totalRounds: cell.totalRounds, currentRound: cell.currentRound, isComplete: cell.isComplete });
+      setActiveCell(cell);
+    } else {
+      console.error('[App] Cell not found for ID:', cellId);
+    }
+  };
+
+  const handleBackToLobby = () => {
+    setSelectedCellId(null);
+    setActiveCell(null);
+    setCurrentView('lobby');
+  };
+
+  const handleViewHistory = () => {
+    setCurrentView('history');
+  };
+
+  // Effects
+  useEffect(() => {
+    if (isConnected && publicClient) {
+      console.log('[App] useEffect triggered - checking contract initialization');
+      console.log('[App] isConnected:', isConnected);
+      console.log('[App] publicClient available:', !!publicClient);
       
-      <header className="bg-gray-900/95 backdrop-blur-sm shadow-2xl border-b border-red-900/30 relative z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="text-6xl animate-pulse">⚖️</div>
-              <div>
-                <h1 className="text-4xl font-bold text-white drop-shadow-lg tracking-wider">
-                  <span className="text-red-400">PRISONER'S</span>{' '}
-                  <span className="text-orange-400">DILEMMA</span>
-                </h1>
-                <p className="text-gray-300 text-sm font-mono tracking-widest opacity-75">
-                  TRUST • BETRAY • SURVIVE
-                </p>
+      // Add a small delay to ensure publicClient is fully ready
+      const timer = setTimeout(() => {
+        checkContractInitialization();
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    } else {
+      console.log('[App] useEffect - not ready yet:', { isConnected, publicClient: !!publicClient });
+    }
+  }, [isConnected, publicClient]);
+
+  useEffect(() => {
+    if (isConnected && publicClient && isContractInitialized) {
+      updateCellsState();
+    }
+  }, [isConnected, publicClient, isContractInitialized]);
+
+  // Auto-refresh every 10 seconds when connected
+  useEffect(() => {
+    if (!isConnected || !publicClient || !isContractInitialized) return;
+    
+    const interval = setInterval(() => {
+      updateCellsState();
+    }, 10000);
+    
+    return () => clearInterval(interval);
+  }, [isConnected, publicClient, isContractInitialized]);
+
+  if (!isConnected) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-black relative overflow-hidden">
+        {/* Prison bars overlay */}
+        <div className="absolute inset-0 opacity-20">
+          <div className="h-full flex justify-center items-center">
+            {[...Array(12)].map((_, i) => (
+              <div
+                key={i}
+                className="w-1 h-full bg-gradient-to-b from-gray-400 via-gray-600 to-gray-800 mx-8 shadow-2xl"
+                style={{
+                  transform: `perspective(1000px) rotateX(${Math.sin(i * 0.5) * 2}deg)`,
+                  animationDelay: `${i * 0.1}s`
+                }}
+              />
+            ))}
+          </div>
+        </div>
+        
+        {/* Spotlight effect */}
+        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-96 h-96 bg-yellow-400 opacity-5 rounded-full blur-3xl animate-pulse" />
+        
+        <div className="relative z-10 flex items-center justify-center min-h-screen">
+          <div className="text-center p-12 bg-black/40 backdrop-blur-sm rounded-3xl border border-gray-700/50 shadow-2xl transform hover:scale-105 transition-all duration-700">
+            <div className="mb-8">
+              <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 mb-4 tracking-wider drop-shadow-2xl animate-pulse">
+                PRISONER'S
+              </h1>
+              <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 via-orange-500 to-red-500 tracking-wider drop-shadow-2xl">
+                DILEMMA
+              </h1>
+            </div>
+            <div className="text-gray-300 text-lg mb-8 font-mono tracking-wide">
+              <div className="animate-typewriter overflow-hidden whitespace-nowrap border-r-4 border-orange-500 mx-auto">
+                ENTER THE CELL... IF YOU DARE
               </div>
             </div>
-            <div className="transform hover:scale-105 transition-transform duration-300">
+            <div className="transform hover:scale-110 transition-all duration-300">
               <ConnectWalletButton />
             </div>
           </div>
         </div>
-      </header>
+        
+        {/* Ambient shadows */}
+        <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black to-transparent" />
+      </div>
+    );
+  }
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-20">
-        <div className="mb-6 transform hover:scale-[1.02] transition-all duration-500">
-          <StatusBanner />
+  if (!isContractInitialized) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-black relative overflow-hidden">
+        {/* Prison bars overlay */}
+        <div className="absolute inset-0 opacity-15">
+          <div className="h-full flex justify-center items-center">
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={i}
+                className="w-2 h-full bg-gradient-to-b from-red-400 via-red-600 to-red-800 mx-12 shadow-2xl animate-pulse"
+                style={{ animationDelay: `${i * 0.2}s` }}
+              />
+            ))}
+          </div>
         </div>
         
-        {error && (
-          <div className="bg-red-900/90 border-2 border-red-500 text-red-200 px-6 py-4 rounded-lg mb-6 shadow-2xl backdrop-blur-sm animate-pulse">
-            <div className="flex items-center space-x-3">
-              <div className="text-2xl">⚠️</div>
-              <div>
-                <div className="font-bold text-red-100">SYSTEM ALERT</div>
-                <div className="font-mono text-sm">{error}</div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Warning lights */}
+        <div className="absolute top-10 left-10 w-4 h-4 bg-red-500 rounded-full animate-ping" />
+        <div className="absolute top-10 right-10 w-4 h-4 bg-red-500 rounded-full animate-ping" style={{ animationDelay: '0.5s' }} />
         
-        {!isConnected ? (
-          <div className="text-center py-16 relative">
-            <div className="bg-gray-900/80 backdrop-blur-sm border-2 border-gray-700 rounded-2xl p-12 shadow-2xl transform hover:scale-105 transition-all duration-700 hover:border-orange-500/50">
-              <div className="text-8xl mb-6 animate-bounce">🔒</div>
-              <h2 className="text-3xl font-bold text-white mb-6 tracking-wider">
-                <span className="text-orange-400">CELL</span> <span className="text-red-400">LOCKED</span>
-              </h2>
-              <p className="text-gray-300 text-lg mb-8 font-mono">
-                Connect your wallet to enter the prison...
-              </p>
-              <div className="border-t border-gray-600 pt-6">
-                <p className="text-gray-400 text-sm">
-                  Only the connected can participate in the dilemma
-                </p>
-              </div>
+        <div className="relative z-10 flex items-center justify-center min-h-screen">
+          <div className="text-center p-12 bg-red-900/20 backdrop-blur-sm rounded-3xl border-2 border-red-500/30 shadow-2xl transform hover:scale-105 transition-all duration-700">
+            <div className="mb-8">
+              <div className="text-red-400 text-6xl mb-4">⚠️</div>
+              <h1 className="text-4xl font-black text-red-400 mb-4 tracking-wider drop-shadow-2xl animate-pulse">
+                SYSTEM LOCKDOWN
+              </h1>
+              <div className="w-full h-1 bg-gradient-to-r from-transparent via-red-500 to-transparent mb-6 animate-pulse" />
             </div>
-          </div>
-        ) : isContractInitialized === null ? (
-          <div className="text-center py-12">
-            <div className="bg-gray-900/60 backdrop-blur-sm border border-gray-700 rounded-xl p-8 shadow-2xl">
-              <div className="text-6xl mb-4 animate-spin">⚙️</div>
-              <p className="text-gray-300 mb-4 font-mono tracking-wider">SCANNING PRISON SYSTEMS...</p>
-              <div className="flex justify-center space-x-1">
-                <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
-                <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
-                <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
-              </div>
-            </div>
-          </div>
-        ) : !isContractInitialized ? (
-          <div className="bg-gradient-to-br from-gray-900 to-gray-800 border-2 border-red-600/50 rounded-2xl shadow-2xl p-8 mb-8 text-center transform hover:scale-[1.02] transition-all duration-500">
-            <div className="text-7xl mb-6 animate-pulse">⚠️</div>
-            <h2 className="text-3xl font-bold text-white mb-4 tracking-wider">
-              <span className="text-red-400">PRISON</span> <span className="text-orange-400">UNINITIALIZED</span>
-            </h2>
-            <p className="text-gray-300 mb-8 text-lg font-mono leading-relaxed">
-              The correctional facility systems require initialization.<br/>
-              <span className="text-orange-300">Establish minimum stakes and prepare the cells...</span>
+            <p className="text-red-200 mb-8 font-mono text-lg tracking-wide">
+              SECURITY PROTOCOLS MUST BE INITIALIZED
             </p>
             <button
-              className="group bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed border-2 border-red-400/50 hover:border-orange-400/70"
               onClick={initializeContract}
               disabled={initializeLoading}
+              className="group relative bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 disabled:from-gray-600 disabled:to-gray-700 text-white px-8 py-4 rounded-xl font-black text-lg tracking-wider transition-all duration-300 transform hover:scale-110 hover:shadow-2xl disabled:hover:scale-100 border-2 border-red-400/50 hover:border-red-300"
             >
-              <div className="flex items-center space-x-3">
-                <div className="text-2xl group-hover:animate-spin">🔑</div>
-                <span className="tracking-wider">
-                  {initializeLoading ? 'INITIALIZING SYSTEMS...' : 'INITIALIZE PRISON'}
-                </span>
-              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-red-400/20 to-red-600/20 rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300" />
+              <span className="relative z-10">
+                {initializeLoading ? (
+                  <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    INITIALIZING SYSTEM...
+                  </div>
+                ) : (
+                  'INITIALIZE SECURITY PROTOCOLS'
+                )}
+              </span>
             </button>
           </div>
-        ) : currentView === 'lobby' ? (
-          <div>
-            <GameLobby 
-              openGames={allGames} 
-              onCreate={handleCreateGame} 
-              onJoin={handleJoinGame} 
-              onEnterGame={handleEnterGame}
+        </div>
+        
+        {/* Danger shadows */}
+        <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-red-900/50 to-transparent" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-black relative overflow-hidden">
+      {/* Prison atmosphere effects */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="h-full flex justify-center items-center">
+          {[...Array(15)].map((_, i) => (
+            <div
+              key={i}
+              className="w-0.5 h-full bg-gradient-to-b from-gray-400 via-gray-600 to-gray-800 mx-6 shadow-xl"
+              style={{
+                transform: `perspective(1000px) rotateX(${Math.sin(i * 0.3) * 1}deg)`,
+                opacity: 0.3 + Math.sin(i * 0.5) * 0.2
+              }}
+            />
+          ))}
+        </div>
+      </div>
+      
+      {/* Ambient lighting */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-orange-400 opacity-5 rounded-full blur-3xl animate-pulse" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-red-400 opacity-5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+      
+      {/* Status Banner with prison styling */}
+      <div className="relative z-20">
+        <StatusBanner 
+          isConnected={isConnected}
+          address={address}
+          isContractInitialized={isContractInitialized}
+          minStake={minStake}
+          error={error}
+          isPolling={isPolling}
+        />
+      </div>
+      
+      {/* Main content area */}
+      <div className="relative z-10 container mx-auto px-4 py-8">
+        <div className="backdrop-blur-sm bg-black/20 rounded-3xl border border-gray-700/50 shadow-2xl p-8">
+          {currentView === 'lobby' && (
+            <GameLobby
+              cells={cells}
+              onCreateCell={handleCreateCell}
+              onJoinCell={handleJoinCell}
+              onEnterCell={handleEnterCell}
+              onViewHistory={handleViewHistory}
               loading={loading}
-              userAddress={address || undefined}
+              minStake={minStake}
+              userAddress={address}
             />
-          </div>
-        ) : currentView === 'game' && selectedGameId ? (
-          <div>
-            <div className="mb-6">
-              <button
-                className="bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700 text-white font-bold px-6 py-3 rounded-lg shadow-lg border border-gray-500/50 transition-all duration-300 transform hover:scale-105 relative z-30 flex items-center space-x-2"
-                onClick={() => setCurrentView('lobby')}
-              >
-                <span className="text-lg">←</span>
-                <span>Back to Lobby</span>
-              </button>
-            </div>
-            <GameBoard
-              game={activeGame}
-              address={address || ''}
+          )}
+          
+          {currentView === 'cell' && activeCell && (
+            <CellView
+              cell={activeCell}
               onMove={handleMove}
+              onContinuationDecision={handleContinuationDecision}
+              onBackToLobby={handleBackToLobby}
+              onRefresh={updateCellsState}
               moveLoading={moveLoading}
-              result={undefined}
+              userAddress={address}
             />
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-gray-300">No game selected</p>
-            <button
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded mt-4"
-              onClick={() => setCurrentView('lobby')}
-            >
-              Go to Lobby
-            </button>
-          </div>
-        )}
-        <GameHistory history={gameHistory} />
-      </main>
-      <Footer />
+          )}
+          
+          {currentView === 'history' && (
+            <GameHistory
+              cellHistory={cellHistory}
+              onBackToLobby={handleBackToLobby}
+              onEnterCell={handleEnterCell}
+              userAddress={address}
+            />
+          )}
+        </div>
+      </div>
+      
+      <div className="relative z-10">
+        <Footer />
+      </div>
+      
+      <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black via-gray-900/50 to-transparent" />
     </div>
   );
 }
-
-export default App;

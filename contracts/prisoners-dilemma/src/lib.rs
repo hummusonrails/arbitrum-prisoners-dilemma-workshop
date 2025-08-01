@@ -1,19 +1,18 @@
-//!
-//! Prisoner's Dilemma Game Contract
-//!
-//! This contract implements a multiplayer Prisoner's Dilemma game where players
-//! stake tokens and make strategic decisions to cooperate or defect.
-//!
-//! Game Rules:
-//! - Players join games by staking tokens
-//! - Each player chooses to cooperate or defect
-//! - Payoffs are distributed based on the classic prisoner's dilemma matrix:
-//!   - Both cooperate: Both get moderate reward
-//!   - Both defect: Both get small punishment
-//!   - One cooperates, one defects: Defector gets large reward, cooperator gets large punishment
-//!
-//! Note: this code is a template-only and has not been audited.
-//!
+// Prisoner's Dilemma Game Contract
+//
+// This contract implements a multiplayer Prisoner's Dilemma game where players
+// stake tokens and make strategic decisions to cooperate or defect.
+//
+// Game Rules:
+// - Players join games by staking tokens
+// - Each player chooses to cooperate or defect
+// - Payoffs are distributed based on the classic prisoner's dilemma matrix:
+//   - Both cooperate: Both get moderate reward
+//   - Both defect: Both get small punishment
+//   - One cooperates, one defects: Defector gets large reward, cooperator gets large punishment
+//
+// Note: this code is a template-only and has not been audited.
+//
 // Allow `cargo stylus export-abi` to generate a main function.
 #![cfg_attr(not(any(test, feature = "export-abi")), no_main)]
 #![cfg_attr(not(any(test, feature = "export-abi")), no_std)]
@@ -22,11 +21,11 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use stylus_sdk::{alloy_primitives::{U256, Address}, prelude::*, stylus_core::log};
+use stylus_sdk::{alloy_primitives::{U256, Address}, prelude::*, stylus_core};
 use alloy_sol_types::sol;
 
-/// Game move options
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+// Game move options
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Move {
     Cooperate = 0,
     Defect = 1,
@@ -41,561 +40,496 @@ impl From<u8> for Move {
     }
 }
 
-/// Game state for a single game
-#[derive(Clone, Debug)]
-pub struct Game {
+// Round state within a cell
+#[derive(Clone)]
+pub struct Round {
+    pub player1_move: Option<Move>,
+    pub player2_move: Option<Move>,
+    pub player1_payout: U256,
+    pub player2_payout: U256,
+    pub is_finished: bool,
+}
+
+// Cell represents a multi-round game between two players
+#[derive(Clone)]
+pub struct Cell {
     pub player1: Address,
     pub player2: Address,
     pub stake_amount: U256,
-    pub player1_move: Option<Move>,
-    pub player2_move: Option<Move>,
-    pub is_finished: bool,
-    pub block_created: U256,
+    pub total_rounds: u8,
+    pub current_round: u8,
+    pub is_complete: bool,
+    pub rounds: Vec<Round>,
+    pub continuation_flags: u8,
 }
 
-// Define persistent storage
+// Contract storage
 sol_storage! {
     #[entrypoint]
     pub struct PrisonersDilemma {
-        // Game counter for unique game IDs
-        uint256 game_counter;
-        
-        // Mapping from game ID to game data
-        mapping(uint256 => bytes) games;
-        
-        // Mapping from player address to their current game ID (0 if not in game)
-        mapping(address => uint256) player_to_game;
-        
-        // Mapping from game ID to total staked amount
-        mapping(uint256 => uint256) game_stakes;
-        
-        // Minimum stake required to play
+        uint256 cell_counter;
+        mapping(uint256 => bytes) cells;
+        mapping(address => uint256) player_to_cell;
+        mapping(bytes32 => uint256) players_to_cell;
+        mapping(uint256 => uint256) cell_stakes;
         uint256 min_stake;
-        
-        // Contract owner
         address owner;
     }
 }
 
-/// Events
+// Events
 sol! {
-    event GameCreated(uint256 indexed game_id, address indexed player1, uint256 stake_amount);
-    event PlayerJoined(uint256 indexed game_id, address indexed player2);
-    event MoveSubmitted(uint256 indexed game_id, address indexed player);
-    event GameFinished(uint256 indexed game_id, address indexed player1, address indexed player2, uint8 player1_move, uint8 player2_move, uint256 player1_payout, uint256 player2_payout);
-    event StakeWithdrawn(address indexed player, uint256 amount);
+    event CellCreated(uint256 indexed cell_id, address indexed player1, uint256 stake);
+    event PlayerJoined(uint256 indexed cell_id, address indexed player2);
+    event RoundComplete(uint256 indexed cell_id, uint8 round_num);
+    event CellComplete(uint256 indexed cell_id);
 }
 
 #[public]
 impl PrisonersDilemma {
-    /// Utilize the new constructor pattern to initialize the contract
     pub fn initialize(&mut self, min_stake: U256) {
-        /// Ensure this can only be called once by checking if owner is not set
         if self.owner.get() == Address::ZERO {
-            self.game_counter.set(U256::from(0));
+            self.cell_counter.set(U256::ZERO);
             self.min_stake.set(min_stake);
             self.owner.set(self.vm().msg_sender());
         }
     }
 
-    /// Create a new game by staking tokens
     #[payable]
-    pub fn create_game(&mut self) -> U256 {
+    pub fn create_cell(&mut self) -> U256 {
         let sender = self.vm().msg_sender();
         let stake = self.vm().msg_value();
         
-        // Check minimum stake
         if stake < self.min_stake.get() {
-            panic!("Stake amount too low");
+            panic!("Stake too low");
+        }
+        if self.player_to_cell.get(sender) != U256::ZERO {
+            panic!("Already in cell");
         }
         
-        // Check player is not already in a game
-        if self.player_to_game.get(sender) != U256::ZERO {
-            panic!("Player already in a game");
-        }
+        let cell_id = self.cell_counter.get() + U256::from(1);
+        self.cell_counter.set(cell_id);
         
-        // Create new game
-        let game_id = self.game_counter.get() + U256::from(1);
-        self.game_counter.set(game_id);
+        // Random rounds 1-10 using multiple entropy sources
+        let block_num = self.vm().block_number();
+        let timestamp = self.vm().block_timestamp();
+        let sender_hash = sender.0[19] as u64; // Use last byte of address
         
-        let game = Game {
+        // Combine multiple sources for better randomness (using u64 arithmetic)
+        let entropy = (block_num.wrapping_add(timestamp).wrapping_add(sender_hash)) % 10;
+        let total_rounds = (entropy + 1) as u8;
+        
+        let cell = Cell {
             player1: sender,
             player2: Address::ZERO,
             stake_amount: stake,
-            player1_move: None,
-            player2_move: None,
-            is_finished: false,
-            block_created: U256::from(self.vm().block_number()),
+            total_rounds,
+            current_round: 0,
+            is_complete: false,
+            rounds: Vec::new(),
+            continuation_flags: 0,
         };
         
-        // Store game data (simplified serialization)
-        let game_data = self.serialize_game(&game);
-        self.games.setter(game_id).set_bytes(&game_data);
-        self.game_stakes.setter(game_id).set(stake);
-        self.player_to_game.setter(sender).set(game_id);
+        self.store_cell(cell_id, &cell);
+        self.player_to_cell.setter(sender).set(cell_id);
+        self.cell_stakes.setter(cell_id).set(stake);
         
-        log(self.vm(), GameCreated {
-            game_id,
-            player1: sender,
-            stake_amount: stake,
-        });
-        
-        game_id
+        stylus_core::log(self.vm(), CellCreated { cell_id, player1: sender, stake });
+        cell_id
     }
-    
-    /// Join an existing game
+
     #[payable]
-    pub fn join_game(&mut self, game_id: U256) {
+    pub fn join_cell(&mut self, cell_id: U256) {
         let sender = self.vm().msg_sender();
         let stake = self.vm().msg_value();
         
-        // Check player is not already in a game
-        if self.player_to_game.get(sender) != U256::ZERO {
-            panic!("Player already in a game");
+        if self.player_to_cell.get(sender) != U256::ZERO {
+            panic!("Already in cell");
         }
         
-        // Get game data from storage
-        let game_data = self.games.get(game_id);
-        let mut game_vec = Vec::with_capacity(game_data.len());
-        for i in 0..game_data.len() {
-            if let Some(b) = game_data.get(i) {
-                game_vec.push(b);
-            }
+        let mut cell = self.load_cell(cell_id);
+        if cell.player2 != Address::ZERO {
+            panic!("Cell full");
         }
-        let mut game = self.deserialize_game(&game_vec);
-        
-        // Check game exists and is waiting for player 2
-        if game.player1 == Address::ZERO {
-            panic!("Game does not exist");
-        }
-        if game.player2 != Address::ZERO {
-            panic!("Game already full");
-        }
-        if game.is_finished {
-            panic!("Game already finished");
+        if stake != cell.stake_amount {
+            panic!("Wrong stake");
         }
         
-        // Check stake matches
-        if stake != game.stake_amount {
-            panic!("Stake amount must match game stake");
-        }
+        cell.player2 = sender;
+        cell.current_round = 1;
         
-        // Join the game
-        game.player2 = sender;
-        
-        // Update storage
-        let game_data = self.serialize_game(&game);
-        self.games.setter(game_id).set_bytes(&game_data);
-        let total_stakes = self.game_stakes.get(game_id) + stake;
-        self.game_stakes.setter(game_id).set(total_stakes);
-        self.player_to_game.setter(sender).set(game_id);
-        
-        log(self.vm(), PlayerJoined {
-            game_id,
-            player2: sender,
+        // Initialize first round
+        cell.rounds.push(Round {
+            player1_move: None,
+            player2_move: None,
+            player1_payout: U256::ZERO,
+            player2_payout: U256::ZERO,
+            is_finished: false,
         });
+        
+        self.store_cell(cell_id, &cell);
+        self.player_to_cell.setter(sender).set(cell_id);
+        self.cell_stakes.setter(cell_id).set(cell.stake_amount + stake);
+        
+        let key = self.hash_players(cell.player1, sender);
+        self.players_to_cell.setter(key.into()).set(cell_id);
+        
+        stylus_core::log(self.vm(), PlayerJoined { cell_id, player2: sender });
     }
-    
-    /// Submit a move (0 = cooperate, 1 = defect)
-    pub fn submit_move(&mut self, game_id: U256, move_choice: u8) {
+
+    pub fn submit_move(&mut self, cell_id: U256, move_choice: u8) {
         let sender = self.vm().msg_sender();
+        let mut cell = self.load_cell(cell_id);
+        
+        if cell.is_complete {
+            panic!("Cell complete");
+        }
+        if cell.player2 == Address::ZERO {
+            panic!("Need player 2");
+        }
+        if sender != cell.player1 && sender != cell.player2 {
+            panic!("Not in cell");
+        }
+        
+        let round_idx = (cell.current_round - 1) as usize;
+        if round_idx >= cell.rounds.len() {
+            panic!("Round not ready - continuation decision needed");
+        }
+        
+        let round = &mut cell.rounds[round_idx];
+        if round.is_finished {
+            panic!("Round already finished");
+        }
+        
         let player_move = Move::from(move_choice);
         
-        // Get game data from storage
-        let game_data = self.games.get(game_id);
-        let mut game_vec = Vec::with_capacity(game_data.len());
-        for i in 0..game_data.len() {
-            if let Some(b) = game_data.get(i) {
-                game_vec.push(b);
+        if sender == cell.player1 {
+            if round.player1_move.is_some() {
+                panic!("Already moved");
             }
-        }
-        let mut game = self.deserialize_game(&game_vec);
-        
-        // Check game is valid and player is in it
-        if game.player1 == Address::ZERO {
-            panic!("Game does not exist");
-        }
-        if game.player2 == Address::ZERO {
-            panic!("Game not ready - waiting for second player");
-        }
-        if game.is_finished {
-            panic!("Game already finished");
-        }
-        
-        // Submit move
-        if sender == game.player1 {
-            if game.player1_move.is_some() {
-                panic!("Player 1 already submitted move");
-            }
-            game.player1_move = Some(player_move);
-        } else if sender == game.player2 {
-            if game.player2_move.is_some() {
-                panic!("Player 2 already submitted move");
-            }
-            game.player2_move = Some(player_move);
+            round.player1_move = Some(player_move);
         } else {
-            panic!("Player not in this game");
+            if round.player2_move.is_some() {
+                panic!("Already moved");
+            }
+            round.player2_move = Some(player_move);
         }
         
-        log(self.vm(), MoveSubmitted {
-            game_id,
-            player: sender,
-        });
-        
-        // Check if both moves are submitted
-        if game.player1_move.is_some() && game.player2_move.is_some() {
-            self.resolve_game(&mut game, game_id);
+        // Check if round is complete
+        if round.player1_move.is_some() && round.player2_move.is_some() {
+            self.resolve_round(&mut cell, cell_id, round_idx);
         }
         
-        // Update storage
-        let game_data = self.serialize_game(&game);
-        self.games.setter(game_id).set_bytes(&game_data);
+        self.store_cell(cell_id, &cell);
     }
-    
-    /// Get game information
-    pub fn get_game(&self, game_id: U256) -> (Address, Address, U256, bool, bool, bool) {
-        let game_data = self.games.get(game_id);
-        let mut game_vec = Vec::with_capacity(game_data.len());
-        for i in 0..game_data.len() {
-            if let Some(b) = game_data.get(i) {
-                game_vec.push(b);
+
+    pub fn submit_continuation_decision(&mut self, cell_id: U256, wants_continue: bool) {
+        let sender = self.vm().msg_sender();
+        let mut cell = self.load_cell(cell_id);
+        
+        if cell.is_complete {
+            panic!("Cell complete");
+        }
+        if sender != cell.player1 && sender != cell.player2 {
+            panic!("Not in cell");
+        }
+        if cell.current_round >= cell.total_rounds {
+            panic!("Max rounds reached");
+        }
+        
+        // Set continuation flags using bit positions:
+        // Bit 0 (value 1): Player 1 wants to continue
+        // Bit 1 (value 2): Player 2 wants to continue  
+        // Bit 2 (value 4): Player 1 has decided
+        // Bit 3 (value 8): Player 2 has decided
+        if sender == cell.player1 {
+            // Player 1 decision
+            if wants_continue {
+                cell.continuation_flags |= 1; // Set P1 wants continue
+            } else {
+                cell.continuation_flags &= !1; // Clear P1 wants continue
+            }
+            cell.continuation_flags |= 4; // Mark P1 as decided
+        } else {
+            // Player 2 decision
+            if wants_continue {
+                cell.continuation_flags |= 2; // Set P2 wants continue
+            } else {
+                cell.continuation_flags &= !2; // Clear P2 wants continue
+            }
+            cell.continuation_flags |= 8; // Mark P2 as decided
+        }
+        
+        // Check if BOTH players have decided
+        let p1_decided = (cell.continuation_flags & 4) != 0;
+        let p2_decided = (cell.continuation_flags & 8) != 0;
+        
+        if p1_decided && p2_decided {
+            let p1_wants = (cell.continuation_flags & 1) != 0;
+            let p2_wants = (cell.continuation_flags & 2) != 0;
+            
+            if p1_wants && p2_wants && cell.current_round < cell.total_rounds {
+                // Both want to continue - create next round
+                cell.current_round += 1;
+                cell.rounds.push(Round {
+                    player1_move: None,
+                    player2_move: None,
+                    player1_payout: U256::ZERO,
+                    player2_payout: U256::ZERO,
+                    is_finished: false,
+                });
+                cell.continuation_flags = 0; // Reset all flags
+            } else {
+                // At least one doesn't want to continue or max rounds reached - end cell
+                self.complete_cell(&mut cell, cell_id);
             }
         }
-        let game = self.deserialize_game(&game_vec);
-        (
-            game.player1,
-            game.player2,
-            game.stake_amount,
-            game.player1_move.is_some(),
-            game.player2_move.is_some(),
-            game.is_finished,
-        )
+        
+        self.store_cell(cell_id, &cell);
     }
-    
-    /// Get player's current game ID
-    pub fn get_player_game(&self, player: Address) -> U256 {
-        self.player_to_game.get(player)
+
+    // Getters
+    pub fn get_cell(&self, cell_id: U256) -> (Address, Address, U256, u8, u8, bool) {
+        let cell = self.load_cell(cell_id);
+        (cell.player1, cell.player2, cell.stake_amount, cell.total_rounds, cell.current_round, cell.is_complete)
     }
-    
-    /// Get minimum stake
+
+    pub fn get_player_cell(&self, player: Address) -> U256 {
+        self.player_to_cell.get(player)
+    }
+
+    pub fn get_players_cell(&self, player1: Address, player2: Address) -> U256 {
+        let key = self.hash_players(player1, player2);
+        self.players_to_cell.get(key.into())
+    }
+
     pub fn get_min_stake(&self) -> U256 {
         self.min_stake.get()
     }
     
-    /// Get current game counter
-    pub fn get_game_counter(&self) -> U256 {
-        self.game_counter.get()
+    pub fn get_owner(&self) -> Address {
+        self.owner.get()
+    }
+    
+    // Get continuation decision status for a cell
+    // Returns (player1_decided, player1_wants, player2_decided, player2_wants)
+    pub fn get_continuation_status(&self, cell_id: U256) -> (bool, bool, bool, bool) {
+        let cell = self.load_cell(cell_id);
+        let p1_decided = (cell.continuation_flags & 4) != 0;
+        let p1_wants = (cell.continuation_flags & 1) != 0;
+        let p2_decided = (cell.continuation_flags & 8) != 0;
+        let p2_wants = (cell.continuation_flags & 2) != 0;
+        (p1_decided, p1_wants, p2_decided, p2_wants)
     }
 
-    /// Get detailed game result information for finished games
-    /// Returns: (player1_move, player2_move, player1_payout, player2_payout)
-    /// Moves: 0 = Cooperate, 1 = Defect
-    pub fn get_game_result(&self, game_id: U256) -> (u8, u8, U256, U256) {
-        let game_data = self.games.get(game_id);
-        let mut game_vec = Vec::with_capacity(game_data.len());
-        for i in 0..game_data.len() {
-            if let Some(b) = game_data.get(i) {
-                game_vec.push(b);
-            }
-        }
-        let game = self.deserialize_game(&game_vec);
+    pub fn get_cell_counter(&self) -> U256 {
+        self.cell_counter.get()
+    }
+
+    pub fn get_round_result(&self, cell_id: U256, round_number: u8) -> (u8, u8, U256, U256) {
+        let cell = self.load_cell(cell_id);
+        let round_idx = (round_number - 1) as usize;
         
-        if !game.is_finished || game.player1_move.is_none() || game.player2_move.is_none() {
+        if round_idx >= cell.rounds.len() {
             return (0, 0, U256::ZERO, U256::ZERO);
         }
         
-        let p1_move = game.player1_move.unwrap();
-        let p2_move = game.player2_move.unwrap();
-        let stake = game.stake_amount;
+        let round = &cell.rounds[round_idx];
+        if !round.is_finished {
+            return (0, 0, U256::ZERO, U256::ZERO);
+        }
         
-        // Calculate payouts using same logic as resolve_game
-        let (p1_payout, p2_payout) = match (p1_move, p2_move) {
-            (Move::Cooperate, Move::Cooperate) => {
-                // Both cooperate: split pot evenly (1.0x each)
-                (stake, stake)
-            },
-            (Move::Defect, Move::Defect) => {
-                // Both defect: both get penalty (0.5x each)
-                let penalty = stake / U256::from(2);
-                (penalty, penalty)
-            },
-            (Move::Cooperate, Move::Defect) => {
-                // Player 1 cooperates, Player 2 defects
-                let penalty = stake / U256::from(2);
-                let reward = stake + penalty;
-                (penalty, reward)
-            },
-            (Move::Defect, Move::Cooperate) => {
-                // Player 1 defects, Player 2 cooperates
-                let penalty = stake / U256::from(2);
-                let reward = stake + penalty;
-                (reward, penalty)
-            },
-        };
+        let p1_move = round.player1_move.unwrap_or(Move::Cooperate) as u8;
+        let p2_move = round.player2_move.unwrap_or(Move::Cooperate) as u8;
         
-        (p1_move as u8, p2_move as u8, p1_payout, p2_payout)
+        (p1_move, p2_move, round.player1_payout, round.player2_payout)
     }
 }
 
-// Private implementation block for helper methods
+// Private helper methods
 impl PrisonersDilemma {
-    fn resolve_game(&mut self, game: &mut Game, game_id: U256) {
-        let p1_move = game.player1_move.unwrap();
-        let p2_move = game.player2_move.unwrap();
+    fn hash_players(&self, player1: Address, player2: Address) -> [u8; 32] {
+        use alloy_primitives::keccak256;
+        let (min_player, max_player) = if player1 < player2 { (player1, player2) } else { (player2, player1) };
+        let mut data = Vec::with_capacity(40);
+        data.extend_from_slice(min_player.as_slice());
+        data.extend_from_slice(max_player.as_slice());
+        keccak256(&data).into()
+    }
+
+    fn resolve_round(&mut self, cell: &mut Cell, cell_id: U256, round_idx: usize) {
+        let round = &mut cell.rounds[round_idx];
+        let p1_move = round.player1_move.unwrap();
+        let p2_move = round.player2_move.unwrap();
+        let stake = cell.stake_amount;
         
-        let stake = game.stake_amount;
-        let _total_pot = stake * U256::from(2);
-        
-        // Prisoner's Dilemma payoff matrix
-        // Both cooperate: split pot evenly (1.0x each)
-        // Both defect: both get small amount (0.5x each)
-        // One cooperates, one defects: defector gets 1.5x, cooperator gets 0.5x
+        // Simplified payoff calculation
         let (p1_payout, p2_payout) = match (p1_move, p2_move) {
-            (Move::Cooperate, Move::Cooperate) => {
-                // Both cooperate - split evenly
-                (stake, stake)
-            },
-            (Move::Defect, Move::Defect) => {
-                // Both defect - both get penalty
-                (stake / U256::from(2), stake / U256::from(2))
-            },
-            (Move::Cooperate, Move::Defect) => {
-                // P1 cooperates, P2 defects - P2 wins big
-                (stake / U256::from(2), stake + stake / U256::from(2))
-            },
-            (Move::Defect, Move::Cooperate) => {
-                // P1 defects, P2 cooperates - P1 wins big
-                (stake + stake / U256::from(2), stake / U256::from(2))
-            },
+            (Move::Cooperate, Move::Cooperate) => (stake, stake),
+            (Move::Defect, Move::Defect) => (stake / U256::from(2), stake / U256::from(2)),
+            (Move::Cooperate, Move::Defect) => (stake / U256::from(2), stake + stake / U256::from(2)),
+            (Move::Defect, Move::Cooperate) => (stake + stake / U256::from(2), stake / U256::from(2)),
         };
         
-        // Mark game as finished
-        game.is_finished = true;
+        round.player1_payout = p1_payout;
+        round.player2_payout = p2_payout;
+        round.is_finished = true;
         
-        // Clear player game mappings
-        self.player_to_game.setter(game.player1).set(U256::ZERO);
-        self.player_to_game.setter(game.player2).set(U256::ZERO);
+        stylus_core::log(self.vm(), RoundComplete { cell_id, round_num: cell.current_round });
         
-        // Transfer payouts to winners
-        // Use Stylus SDK transfer_eth function to send ETH to players based on game outcome
-        if p1_payout > U256::ZERO {
-            // Transfer payout to player 1
-            let _ = self.vm().transfer_eth(
-                game.player1,
-                p1_payout
-            );
+        // Check if we've completed all rounds
+        if cell.current_round >= cell.total_rounds {
+            self.complete_cell(cell, cell_id);
+        } else {
+            // Don't auto-advance - wait for continuation decisions
+            cell.continuation_flags = 0; // Reset for next decision
         }
-        
-        if p2_payout > U256::ZERO {
-            // Transfer payout to player 2
-            let _ = self.vm().transfer_eth(
-                game.player2,
-                p2_payout
-            );
-        }
-        
-        // Emit game finished event
-        log(self.vm(), GameFinished {
-            game_id,
-            player1: game.player1,
-            player2: game.player2,
-            player1_move: p1_move as u8,
-            player2_move: p2_move as u8,
-            player1_payout: p1_payout,
-            player2_payout: p2_payout,
-        });
     }
-    
-    /// Serialize game data to bytes for storage
-    fn serialize_game(&self, game: &Game) -> Vec<u8> {
-        let mut data = Vec::new();
+
+    fn complete_cell(&mut self, cell: &mut Cell, cell_id: U256) {
+        cell.is_complete = true;
         
-        // Serialize player1 (20 bytes)
-        data.extend_from_slice(game.player1.as_slice());
+        // Calculate total payouts
+        let mut total_p1 = U256::ZERO;
+        let mut total_p2 = U256::ZERO;
         
-        // Serialize player2 (20 bytes)
-        data.extend_from_slice(game.player2.as_slice());
-        
-        // Serialize stake_amount (32 bytes)
-        let stake_bytes = game.stake_amount.to_be_bytes::<32>();
-        data.extend_from_slice(&stake_bytes);
-        
-        // Serialize moves and flags (1 byte)
-        let mut flags = 0u8;
-        if let Some(move1) = game.player1_move {
-            flags |= 0x01; // player1 has move
-            if move1 == Move::Defect {
-                flags |= 0x02; // player1 defected
+        for round in &cell.rounds {
+            if round.is_finished {
+                total_p1 += round.player1_payout;
+                total_p2 += round.player2_payout;
             }
         }
-        if let Some(move2) = game.player2_move {
-            flags |= 0x04; // player2 has move
-            if move2 == Move::Defect {
-                flags |= 0x08; // player2 defected
+        
+        // Clear mappings
+        self.player_to_cell.setter(cell.player1).set(U256::ZERO);
+        self.player_to_cell.setter(cell.player2).set(U256::ZERO);
+        
+        // Transfer payouts
+        if total_p1 > U256::ZERO {
+            let _ = self.vm().transfer_eth(cell.player1, total_p1);
+        }
+        if total_p2 > U256::ZERO {
+            let _ = self.vm().transfer_eth(cell.player2, total_p2);
+        }
+        
+        stylus_core::log(self.vm(), CellComplete { cell_id });
+    }
+
+    // Serialization
+    fn store_cell(&mut self, cell_id: U256, cell: &Cell) {
+        let data = self.serialize_cell(cell);
+        self.cells.setter(cell_id).set_bytes(&data);
+    }
+
+    fn load_cell(&self, cell_id: U256) -> Cell {
+        let data = self.cells.get(cell_id);
+        let mut data_vec = Vec::with_capacity(data.len());
+        for i in 0..data.len() {
+            if let Some(b) = data.get(i) {
+                data_vec.push(b);
             }
         }
-        if game.is_finished {
-            flags |= 0x10; // game finished
+        self.deserialize_cell(&data_vec)
+    }
+
+    fn serialize_cell(&self, cell: &Cell) -> Vec<u8> {
+        let mut data = Vec::with_capacity(128);
+        
+        data.extend_from_slice(cell.player1.as_slice());
+        data.extend_from_slice(cell.player2.as_slice());
+        data.extend_from_slice(&cell.stake_amount.to_be_bytes::<32>());
+        data.push(cell.total_rounds);
+        data.push(cell.current_round);
+        data.push(if cell.is_complete { 1 } else { 0 });
+        
+        // Rounds count
+        data.push(cell.rounds.len() as u8);
+        
+        // Serialize rounds
+        for round in &cell.rounds {
+            let mut round_byte = 0u8;
+            if let Some(Move::Cooperate) = round.player1_move { round_byte |= 0x01; }
+            if let Some(Move::Defect) = round.player1_move { round_byte |= 0x02; }
+            if let Some(Move::Cooperate) = round.player2_move { round_byte |= 0x04; }
+            if let Some(Move::Defect) = round.player2_move { round_byte |= 0x08; }
+            if round.is_finished { round_byte |= 0x10; }
+            data.push(round_byte);
+            
+            if round.is_finished {
+                data.extend_from_slice(&round.player1_payout.to_be_bytes::<32>());
+                data.extend_from_slice(&round.player2_payout.to_be_bytes::<32>());
+            }
         }
-        data.push(flags);
         
-        // Serialize block_created (32 bytes)
-        let block_bytes = game.block_created.to_be_bytes::<32>();
-        data.extend_from_slice(&block_bytes);
-        
+        data.push(cell.continuation_flags);
         data
     }
-    
-    /// Deserialize game data from storage
-    fn deserialize_game(&self, data: &[u8]) -> Game {
-        if data.len() < 105 { // 20 + 20 + 32 + 1 + 32 = 105 bytes minimum
-            return Game {
-                player1: Address::ZERO,
-                player2: Address::ZERO,
-                stake_amount: U256::ZERO,
-                player1_move: None,
-                player2_move: None,
-                is_finished: false,
-                block_created: U256::ZERO,
-            };
+
+    fn deserialize_cell(&self, data: &[u8]) -> Cell {
+        if data.len() < 76 {
+            panic!("Invalid cell data");
         }
         
-        let mut offset = 0;
+        let player1 = Address::from_slice(&data[0..20]);
+        let player2 = Address::from_slice(&data[20..40]);
+        let stake_amount = U256::from_be_bytes::<32>(data[40..72].try_into().unwrap());
+        let total_rounds = data[72];
+        let current_round = data[73];
+        let is_complete = data[74] != 0;
+        let rounds_count = data[75] as usize;
         
-        // Deserialize player1
-        let player1 = Address::from_slice(&data[offset..offset + 20]);
-        offset += 20;
+        let mut rounds = Vec::with_capacity(rounds_count);
+        let mut pos = 76;
         
-        // Deserialize player2
-        let player2 = Address::from_slice(&data[offset..offset + 20]);
-        offset += 20;
+        for _ in 0..rounds_count {
+            if pos >= data.len() { break; }
+            
+            let round_byte = data[pos];
+            pos += 1;
+            
+            let player1_move = match round_byte & 0x03 {
+                0x01 => Some(Move::Cooperate),
+                0x02 => Some(Move::Defect),
+                _ => None,
+            };
+            
+            let player2_move = match round_byte & 0x0C {
+                0x04 => Some(Move::Cooperate),
+                0x08 => Some(Move::Defect),
+                _ => None,
+            };
+            
+            let is_finished = (round_byte & 0x10) != 0;
+            
+            let (player1_payout, player2_payout) = if is_finished && pos + 64 <= data.len() {
+                let p1_payout = U256::from_be_bytes::<32>(data[pos..pos+32].try_into().unwrap());
+                let p2_payout = U256::from_be_bytes::<32>(data[pos+32..pos+64].try_into().unwrap());
+                pos += 64;
+                (p1_payout, p2_payout)
+            } else {
+                (U256::ZERO, U256::ZERO)
+            };
+            
+            rounds.push(Round {
+                player1_move,
+                player2_move,
+                player1_payout,
+                player2_payout,
+                is_finished,
+            });
+        }
         
-        // Deserialize stake_amount
-        let mut stake_bytes = [0u8; 32];
-        stake_bytes.copy_from_slice(&data[offset..offset + 32]);
-        let stake_amount = U256::from_be_bytes(stake_bytes);
-        offset += 32;
+        let continuation_flags = if pos < data.len() { data[pos] } else { 0 };
         
-        // Deserialize flags
-        let flags = data[offset];
-        offset += 1;
-        
-        let player1_move = if flags & 0x01 != 0 {
-            Some(if flags & 0x02 != 0 { Move::Defect } else { Move::Cooperate })
-        } else {
-            None
-        };
-        
-        let player2_move = if flags & 0x04 != 0 {
-            Some(if flags & 0x08 != 0 { Move::Defect } else { Move::Cooperate })
-        } else {
-            None
-        };
-        
-        let is_finished = flags & 0x10 != 0;
-        
-        // Deserialize block_created
-        let mut block_bytes = [0u8; 32];
-        block_bytes.copy_from_slice(&data[offset..offset + 32]);
-        let block_created = U256::from_be_bytes(block_bytes);
-        
-        Game {
+        Cell {
             player1,
             player2,
             stake_amount,
-            player1_move,
-            player2_move,
-            is_finished,
-            block_created,
+            total_rounds,
+            current_round,
+            is_complete,
+            rounds,
+            continuation_flags,
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use alloy_primitives::{Address, U256};
-    use std::str::FromStr;
-    
-    // Helper function to create a test game with initialized contract
-    fn create_test_game() -> U256 {
-        // This is a simplified test that demonstrates the constructor pattern
-        // In a real deployment, the constructor would be called during contract deployment
-        U256::from(1) // Mock game ID
-    }
-
-    #[test]
-    fn test_constructor() {
-        // This test demonstrates the constructor pattern
-        // In Stylus SDK v0.9, the constructor is called during deployment
-        // and initializes the contract state with the provided parameters
-        
-        let min_stake = U256::from(100);
-        
-        // The constructor would be called like: contract.new(min_stake)
-        // This would set:
-        // - game_counter to 0
-        // - min_stake to the provided value
-        // - owner to msg_sender (the deployer)
-        
-        // This test passes to demonstrate the constructor exists
-        assert_eq!(min_stake, U256::from(100));
-    }
-    
-    #[test]
-    fn test_create_and_join_game() {
-        // This test demonstrates the game creation flow
-        // After constructor initialization, players can create and join games
-        
-        let player1 = Address::from_str("0x0000000000000000000000000000000000000001").unwrap();
-        let player2 = Address::from_str("0x0000000000000000000000000000000000000002").unwrap();
-        let stake = U256::from(100);
-        
-        // Mock game creation
-        let game_id = create_test_game();
-        assert_eq!(game_id, U256::from(1));
-        
-        // Verify addresses are valid
-        assert_ne!(player1, Address::ZERO);
-        assert_ne!(player2, Address::ZERO);
-        assert_eq!(stake, U256::from(100));
-    }
-    
-    #[test]
-    fn test_game_play() {
-        // This test demonstrates the game play mechanics
-        // After initialization, players can submit moves and games are resolved
-        
-        let player1 = Address::from_str("0x0000000000000000000000000000000000000001").unwrap();
-        let player2 = Address::from_str("0x0000000000000000000000000000000000000002").unwrap();
-        
-        // Mock game play
-        let game_id = create_test_game();
-        
-        // Verify move types
-        let cooperate_move = Move::from(0);
-        let defect_move = Move::from(1);
-        
-        assert_eq!(cooperate_move, Move::Cooperate);
-        assert_eq!(defect_move, Move::Defect);
-        assert_eq!(game_id, U256::from(1));
-    }
-    
-    #[test]
-    fn test_double_join() {
-        // This test demonstrates the double join prevention logic
-        // The contract prevents players from being in multiple games simultaneously
-        
-        let player1 = Address::from_str("0x0000000000000000000000000000000000000001").unwrap();
-        let stake = U256::from(100);
-        
-        // Mock scenario where player tries to join multiple games
-        let game_id1 = create_test_game();
-        let game_id2 = U256::from(2);
-        
-        // Verify different game IDs
-        assert_ne!(game_id1, game_id2);
-        assert_ne!(player1, Address::ZERO);
-        assert_eq!(stake, U256::from(100));
     }
 }
