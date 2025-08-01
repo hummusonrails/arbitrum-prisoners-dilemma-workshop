@@ -1,4 +1,5 @@
-import React, { createContext, ReactNode, useState, useContext } from 'react';
+import React, { createContext, useState, useContext } from 'react';
+import type { ReactNode } from 'react';
 import { createPublicClient, createWalletClient, custom } from 'viem';
 import { localhost } from '../constants';
 

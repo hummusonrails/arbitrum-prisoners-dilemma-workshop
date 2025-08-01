@@ -1,27 +1,6 @@
 import React from 'react';
 import MoveButtons from './MoveButtons';
-
-interface GameState {
-  player1: string;
-  player2: string;
-  stake: string;
-  player1Move: boolean;
-  player2Move: boolean;
-  isFinished: boolean;
-}
-
-interface GameBoardProps {
-  game: GameState;
-  address: string;
-  onMove: (move: 0 | 1) => void;
-  moveLoading: boolean;
-  result?: {
-    player1Move: string;
-    player2Move: string;
-    player1Payout: string;
-    player2Payout: string;
-  };
-}
+import type { GameBoardProps } from '../types/GameBoard';
 
 const GameBoard: React.FC<GameBoardProps> = ({ game, address, onMove, moveLoading, result }) => {
   const isPlayer1 = game.player1.toLowerCase() === address.toLowerCase();
