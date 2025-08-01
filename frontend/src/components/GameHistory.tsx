@@ -1,25 +1,6 @@
 import React from 'react';
 import { formatEther } from 'viem';
-
-interface Cell {
-  id: string;
-  player1: string;
-  player2: string;
-  stake: bigint;
-  totalRounds: number;
-  currentRound: number;
-  isComplete: boolean;
-  rounds: Round[];
-}
-
-interface Round {
-  roundNumber: number;
-  player1Move: number | null;
-  player2Move: number | null;
-  player1Payout: bigint;
-  player2Payout: bigint;
-  isComplete: boolean;
-}
+import type { Cell } from '../types/Cell';
 
 interface GameHistoryProps {
   cellHistory: Cell[];

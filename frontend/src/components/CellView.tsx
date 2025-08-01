@@ -1,32 +1,13 @@
 import React from 'react';
 import { formatEther } from 'viem';
-
-interface Cell {
-  id: string;
-  player1: string;
-  player2: string;
-  stake: bigint;
-  totalRounds: number;
-  currentRound: number;
-  isComplete: boolean;
-  rounds: Round[];
-}
-
-interface Round {
-  roundNumber: number;
-  player1Move: number | null;
-  player2Move: number | null;
-  player1Payout: bigint;
-  player2Payout: bigint;
-  isComplete: boolean;
-}
+import type { Cell, Round } from '../types/Cell';
 
 interface CellViewProps {
   cell: Cell;
-  onMove: (cellId: string, move: number) => void;
-  onContinuationDecision: (cellId: string, wantsToContinue: boolean) => void;
+  onMove: (cellId: string, move: number) => Promise<void>;
+  onContinuationDecision: (cellId: string, wantsToContinue: boolean) => Promise<void>;
   onBackToLobby: () => void;
-  onRefresh: () => void;
+  onRefresh: () => Promise<void>;
   moveLoading: boolean;
   userAddress: string | undefined;
 }
@@ -392,7 +373,7 @@ const CellView: React.FC<CellViewProps> = ({
               >
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-lg font-semibold text-white">
-                    Round {round.roundNumber + 1}
+                    Round {round.roundNumber}
                   </h3>
                   <div className="text-2xl">
                     {getOutcomeIcon(round.player1Move, round.player2Move)}

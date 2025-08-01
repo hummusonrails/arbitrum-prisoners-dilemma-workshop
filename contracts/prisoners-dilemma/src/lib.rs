@@ -96,7 +96,7 @@ impl PrisonersDilemma {
     }
 
     #[payable]
-    pub fn create_cell(&mut self) -> U256 {
+    pub fn create_cell(&mut self, total_rounds: u8) -> U256 {
         let sender = self.vm().msg_sender();
         let stake = self.vm().msg_value();
         
@@ -109,15 +109,6 @@ impl PrisonersDilemma {
         
         let cell_id = self.cell_counter.get() + U256::from(1);
         self.cell_counter.set(cell_id);
-        
-        // Random rounds 1-10 using multiple entropy sources
-        let block_num = self.vm().block_number();
-        let timestamp = self.vm().block_timestamp();
-        let sender_hash = sender.0[19] as u64; // Use last byte of address
-        
-        // Combine multiple sources for better randomness (using u64 arithmetic)
-        let entropy = (block_num.wrapping_add(timestamp).wrapping_add(sender_hash)) % 10;
-        let total_rounds = (entropy + 1) as u8;
         
         let cell = Cell {
             player1: sender,
@@ -271,13 +262,16 @@ impl PrisonersDilemma {
             if p1_wants && p2_wants && cell.current_round < cell.total_rounds {
                 // Both want to continue - create next round
                 cell.current_round += 1;
-                cell.rounds.push(Round {
-                    player1_move: None,
-                    player2_move: None,
-                    player1_payout: U256::ZERO,
-                    player2_payout: U256::ZERO,
-                    is_finished: false,
-                });
+                // Ensure we only push a new round if current_round == rounds.len() + 1 (no duplicate rounds)
+                if cell.rounds.len() < cell.current_round as usize {
+                    cell.rounds.push(Round {
+                        player1_move: None,
+                        player2_move: None,
+                        player1_payout: U256::ZERO,
+                        player2_payout: U256::ZERO,
+                        is_finished: false,
+                    });
+                }
                 cell.continuation_flags = 0; // Reset all flags
             } else {
                 // At least one doesn't want to continue or max rounds reached - end cell
