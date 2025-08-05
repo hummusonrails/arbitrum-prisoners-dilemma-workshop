@@ -12,12 +12,12 @@ export const localhost = defineChain({
   },
   rpcUrls: {
     default: {
-      http: ['http://127.0.0.1:8547', 'http://localhost:8547'],
-      webSocket: ['ws://127.0.0.1:8547', 'ws://localhost:8547']
+      http: ['http://localhost:8547'],
+      webSocket: ['ws://127.0.0.1:8547']
     },
     public: {
-      http: ['http://127.0.0.1:8547', 'http://localhost:8547'],
-      webSocket: ['ws://127.0.0.1:8547', 'ws://localhost:8547']
+      http: ['http://localhost:8547'],
+      webSocket: ['ws://127.0.0.1:8547']
     },
   },
   testnet: false,

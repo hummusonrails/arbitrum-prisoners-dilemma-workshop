@@ -77,12 +77,41 @@ sol_storage! {
     }
 }
 
-// Events
+// Events and Errors
 sol! {
     event CellCreated(uint256 indexed cell_id, address indexed player1, uint256 stake);
     event PlayerJoined(uint256 indexed cell_id, address indexed player2);
     event RoundComplete(uint256 indexed cell_id, uint8 round_num);
     event CellComplete(uint256 indexed cell_id);
+    error StakeTooLow(uint256 cell_id);
+    error AlreadyInCell(uint256 cell_id);
+    error CellFull(uint256 cell_id);
+    error WrongStake(uint256 cell_id);
+    error CellIsComplete(uint256 cell_id);
+    error NeedPlayer2(uint256 cell_id);
+    error NotInCell(uint256 cell_id);
+    error NoRoundStarted(uint256 cell_id);
+    error RoundNotReady(uint256 cell_id);
+    error RoundAlreadyFinished(uint256 cell_id);
+    error MaxRoundsReached(uint256 cell_id);
+    error InvalidCellData(uint256 cell_id);
+}
+
+// Error types
+#[derive(SolidityError)]
+pub enum PrisonersDilemmaErrors {
+    StakeTooLow(StakeTooLow),
+    AlreadyInCell(AlreadyInCell),
+    CellFull(CellFull),
+    WrongStake(WrongStake),
+    CellIsComplete(CellIsComplete),
+    NeedPlayer2(NeedPlayer2),
+    NotInCell(NotInCell),
+    NoRoundStarted(NoRoundStarted),
+    RoundNotReady(RoundNotReady),
+    RoundAlreadyFinished(RoundAlreadyFinished),
+    MaxRoundsReached(MaxRoundsReached),
+    InvalidCellData(InvalidCellData),
 }
 
 #[public]
@@ -96,15 +125,15 @@ impl PrisonersDilemma {
     }
 
     #[payable]
-    pub fn create_cell(&mut self, total_rounds: u8) -> U256 {
+    pub fn create_cell(&mut self, total_rounds: u8) -> Result<U256, PrisonersDilemmaErrors> {
         let sender = self.vm().msg_sender();
         let stake = self.vm().msg_value();
         
         if stake < self.min_stake.get() {
-            panic!("Stake too low");
+            return Err(PrisonersDilemmaErrors::StakeTooLow(StakeTooLow { cell_id: U256::ZERO }));
         }
         if self.player_to_cell.get(sender) != U256::ZERO {
-            panic!("Already in cell");
+            return Err(PrisonersDilemmaErrors::AlreadyInCell(AlreadyInCell { cell_id: U256::ZERO }));
         }
         
         let cell_id = self.cell_counter.get() + U256::from(1);
@@ -125,25 +154,25 @@ impl PrisonersDilemma {
         self.player_to_cell.setter(sender).set(cell_id);
         self.cell_stakes.setter(cell_id).set(stake);
         
-        stylus_core::log(self.vm(), CellCreated { cell_id, player1: sender, stake });
-        cell_id
+    stylus_core::log(self.vm(), CellCreated { cell_id, player1: sender, stake });
+    Ok(cell_id)
     }
 
     #[payable]
-    pub fn join_cell(&mut self, cell_id: U256) {
+    pub fn join_cell(&mut self, cell_id: U256) -> Result<(), PrisonersDilemmaErrors> {
         let sender = self.vm().msg_sender();
         let stake = self.vm().msg_value();
         
         if self.player_to_cell.get(sender) != U256::ZERO {
-            panic!("Already in cell");
+            return Err(PrisonersDilemmaErrors::AlreadyInCell(AlreadyInCell { cell_id }));
         }
-        
+
         let mut cell = self.load_cell(cell_id);
         if cell.player2 != Address::ZERO {
-            panic!("Cell full");
+            return Err(PrisonersDilemmaErrors::CellFull(CellFull { cell_id }));
         }
         if stake != cell.stake_amount {
-            panic!("Wrong stake");
+            return Err(PrisonersDilemmaErrors::WrongStake(WrongStake { cell_id }));
         }
         
         cell.player2 = sender;
@@ -165,43 +194,47 @@ impl PrisonersDilemma {
         let key = self.hash_players(cell.player1, sender);
         self.players_to_cell.setter(key.into()).set(cell_id);
         
-        stylus_core::log(self.vm(), PlayerJoined { cell_id, player2: sender });
+    stylus_core::log(self.vm(), PlayerJoined { cell_id, player2: sender });
+    Ok(())
     }
 
-    pub fn submit_move(&mut self, cell_id: U256, move_choice: u8) {
+    pub fn submit_move(&mut self, cell_id: U256, move_choice: u8) -> Result<(), PrisonersDilemmaErrors> {
         let sender = self.vm().msg_sender();
         let mut cell = self.load_cell(cell_id);
         
         if cell.is_complete {
-            panic!("Cell complete");
+            return Err(PrisonersDilemmaErrors::CellIsComplete(CellIsComplete { cell_id }));
         }
         if cell.player2 == Address::ZERO {
-            panic!("Need player 2");
+            return Err(PrisonersDilemmaErrors::NeedPlayer2(NeedPlayer2 { cell_id }));
         }
         if sender != cell.player1 && sender != cell.player2 {
-            panic!("Not in cell");
+            return Err(PrisonersDilemmaErrors::NotInCell(NotInCell { cell_id }));
         }
-        
+
+        if cell.current_round == 0 {
+            return Err(PrisonersDilemmaErrors::NoRoundStarted(NoRoundStarted { cell_id }));
+        }
         let round_idx = (cell.current_round - 1) as usize;
         if round_idx >= cell.rounds.len() {
-            panic!("Round not ready - continuation decision needed");
+            return Err(PrisonersDilemmaErrors::RoundNotReady(RoundNotReady { cell_id }));
         }
-        
+
         let round = &mut cell.rounds[round_idx];
         if round.is_finished {
-            panic!("Round already finished");
+            return Err(PrisonersDilemmaErrors::RoundAlreadyFinished(RoundAlreadyFinished { cell_id }));
         }
         
         let player_move = Move::from(move_choice);
         
         if sender == cell.player1 {
             if round.player1_move.is_some() {
-                panic!("Already moved");
+                return Err(PrisonersDilemmaErrors::RoundAlreadyFinished(RoundAlreadyFinished { cell_id }));
             }
             round.player1_move = Some(player_move);
         } else {
             if round.player2_move.is_some() {
-                panic!("Already moved");
+                return Err(PrisonersDilemmaErrors::RoundAlreadyFinished(RoundAlreadyFinished { cell_id }));
             }
             round.player2_move = Some(player_move);
         }
@@ -211,21 +244,22 @@ impl PrisonersDilemma {
             self.resolve_round(&mut cell, cell_id, round_idx);
         }
         
-        self.store_cell(cell_id, &cell);
+    self.store_cell(cell_id, &cell);
+    Ok(())
     }
 
-    pub fn submit_continuation_decision(&mut self, cell_id: U256, wants_continue: bool) {
+    pub fn submit_continuation_decision(&mut self, cell_id: U256, wants_continue: bool) -> Result<(), PrisonersDilemmaErrors> {
         let sender = self.vm().msg_sender();
         let mut cell = self.load_cell(cell_id);
         
         if cell.is_complete {
-            panic!("Cell complete");
+            return Err(PrisonersDilemmaErrors::CellIsComplete(CellIsComplete { cell_id }));
         }
         if sender != cell.player1 && sender != cell.player2 {
-            panic!("Not in cell");
+            return Err(PrisonersDilemmaErrors::NotInCell(NotInCell { cell_id }));
         }
         if cell.current_round >= cell.total_rounds {
-            panic!("Max rounds reached");
+            return Err(PrisonersDilemmaErrors::MaxRoundsReached(MaxRoundsReached { cell_id }));
         }
         
         // Set continuation flags using bit positions:
@@ -258,12 +292,20 @@ impl PrisonersDilemma {
         if p1_decided && p2_decided {
             let p1_wants = (cell.continuation_flags & 1) != 0;
             let p2_wants = (cell.continuation_flags & 2) != 0;
-            
+
             if p1_wants && p2_wants && cell.current_round < cell.total_rounds {
                 // Both want to continue - create next round
                 cell.current_round += 1;
-                // Ensure we only push a new round if current_round == rounds.len() + 1 (no duplicate rounds)
+                // Always push a new round if advancing
                 if cell.rounds.len() < cell.current_round as usize {
+                    cell.rounds.push(Round {
+                        player1_move: None,
+                        player2_move: None,
+                        player1_payout: U256::ZERO,
+                        player2_payout: U256::ZERO,
+                        is_finished: false,
+                    });
+                } else if cell.rounds.len() == cell.current_round as usize {
                     cell.rounds.push(Round {
                         player1_move: None,
                         player2_move: None,
@@ -279,7 +321,8 @@ impl PrisonersDilemma {
             }
         }
         
-        self.store_cell(cell_id, &cell);
+    self.store_cell(cell_id, &cell);
+    Ok(())
     }
 
     // Getters
@@ -461,7 +504,17 @@ impl PrisonersDilemma {
 
     fn deserialize_cell(&self, data: &[u8]) -> Cell {
         if data.len() < 76 {
-            panic!("Invalid cell data");
+            // Return a default cell
+            return Cell {
+                player1: Address::ZERO,
+                player2: Address::ZERO,
+                stake_amount: U256::ZERO,
+                total_rounds: 0,
+                current_round: 0,
+                is_complete: false,
+                rounds: Vec::new(),
+                continuation_flags: 0,
+            };
         }
         
         let player1 = Address::from_slice(&data[0..20]);

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ConnectWalletButton, StatusBanner, GameLobby, CellView, GameHistory, Footer } from './components';
 import { useWeb3 } from './contexts/Web3Context';
 import { useCells } from './hooks/useCells';
-import { initializeContract, checkContractInitialization } from './lib/contract';
+import { initializeContract, checkContractInitialization, startContractInitializationPolling } from './lib/contract';
 import { useCellActions } from './hooks/useCellActions';
 
 type ViewType = 'lobby' | 'cell' | 'history';
@@ -63,6 +63,23 @@ export default function App() {
       checkContractInitialization(publicClient, setIsContractInitialized, setMinStake, (msg: string | null) => setError(msg ?? undefined));
     }
   }, [publicClient, isContractInitialized]);
+
+  // Polling contract initialization status
+  useEffect(() => {
+    let stopPolling: (() => void) | undefined;
+    if (publicClient) {
+      stopPolling = startContractInitializationPolling(
+        publicClient,
+        setIsContractInitialized,
+        setMinStake,
+        (msg: string | null) => setError(msg ?? undefined),
+        5000 // poll every 5 seconds
+      );
+    }
+    return () => {
+      if (stopPolling) stopPolling();
+    };
+  }, [publicClient]);
 
   if (!isConnected) {
     return (

@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { parseEther } from 'viem';
+import { generateRandomRounds } from '../utils/CellManager';
 import type { WalletClient, PublicClient } from 'viem';
 import { CONTRACT_ADDRESS, abi, localhost } from '../lib/contract';
 import type { Cell } from '../types/Cell';
@@ -47,18 +48,16 @@ export function useCellActions({
       setError(null);
       
       const stakeValue = parseEther(stake);
-      console.log('Creating cell with stake:', stake, 'wei:', stakeValue.toString());
       
       // Get the current gas price
       const gasPrice = await publicClient.getGasPrice();
-      console.log('Current gas price:', gasPrice.toString());
       
-      // Build the transaction request
+      const totalRounds = generateRandomRounds();
       const request = {
         address: CONTRACT_ADDRESS,
         abi,
         functionName: 'createCell',
-        args: [],
+        args: [totalRounds],
         account: address as `0x${string}`,
         chain: localhost,
         value: stakeValue,

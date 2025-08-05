@@ -1,12 +1,12 @@
 import type { Cell, Round, CellManager } from '../types/Cell';
 
+// Shared utility for generating a random number of rounds between 1 and 10
+export function generateRandomRounds(): number {
+  return Math.floor(Math.random() * 10) + 1;
+}
+
 export class CellManagerImpl implements CellManager {
   public cells: Map<string, Cell> = new Map();
-
-  // Generate a random number of rounds between 1 and 10
-  private generateRandomRounds(): number {
-    return Math.floor(Math.random() * 10) + 1;
-  }
 
   // Create a unique cell ID based on players (normalized order)
   private createCellId(player1: string, player2: string): string {
@@ -24,16 +24,17 @@ export class CellManagerImpl implements CellManager {
     
     // Check if cell already exists with matching stake
     const existingCell = this.cells.get(cellId);
-    if (existingCell && !existingCell.isComplete && existingCell.stake === stake) {
+    const stakeBigInt = BigInt(stake);
+    if (existingCell && !existingCell.isComplete && existingCell.stake === stakeBigInt) {
       return existingCell;
     }
 
-    const totalRounds = this.generateRandomRounds();
+    const totalRounds = generateRandomRounds();
     const cell: Cell = {
       id: cellId,
       player1: player1.toLowerCase(),
       player2: player2.toLowerCase(),
-      stake,
+      stake: stakeBigInt,
       totalRounds,
       currentRound: 0,
       rounds: [],
@@ -54,9 +55,14 @@ export class CellManagerImpl implements CellManager {
 
     const roundNumber = cell.rounds.length + 1;
     const round: Round = {
-      gameId,
       roundNumber,
-      isFinished: false
+      player1Move: null,
+      player2Move: null,
+      player1Payout: BigInt(0),
+      player2Payout: BigInt(0),
+      isComplete: false,
+      gameId,
+      result: undefined
     };
 
     cell.rounds.push(round);
@@ -76,11 +82,11 @@ export class CellManagerImpl implements CellManager {
       return;
     }
 
-    round.isFinished = true;
-    round.result = result;
+  round.isComplete = true;
+  round.result = result;
 
     // Check if cell is complete
-    if (cell.rounds.length >= cell.totalRounds && cell.rounds.every(r => r.isFinished)) {
+    if (cell.rounds.length >= cell.totalRounds && cell.rounds.every(r => r.isComplete)) {
       cell.isComplete = true;
       console.log(`[CellManager] Cell ${cellId} completed after ${cell.rounds.length} rounds`);
     }
@@ -111,7 +117,7 @@ export class CellManagerImpl implements CellManager {
       if (cell.rounds.length >= cell.totalRounds) return false;
       
       const lastRound = cell.rounds[cell.rounds.length - 1];
-      return lastRound.isFinished;
+  return lastRound.isComplete;
     });
   }
 
@@ -121,8 +127,8 @@ export class CellManagerImpl implements CellManager {
     if (!cell || cell.rounds.length === 0) return undefined;
     
     // Return the last round that's not finished, or the last round if all are finished
-    const unfinishedRound = cell.rounds.find(r => !r.isFinished);
-    return unfinishedRound || cell.rounds[cell.rounds.length - 1];
+  const unfinishedRound = cell.rounds.find(r => !r.isComplete);
+  return unfinishedRound || cell.rounds[cell.rounds.length - 1];
   }
 
   // End a cell early (when players decline to continue)
@@ -138,5 +144,4 @@ export class CellManagerImpl implements CellManager {
   }
 }
 
-// Global instance
 export const cellManager = new CellManagerImpl();

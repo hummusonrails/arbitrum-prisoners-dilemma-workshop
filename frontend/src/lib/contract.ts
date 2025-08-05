@@ -4,7 +4,7 @@ import abi from '../abi/PrisonersDilemmaContract.json';
 import { parseEther } from 'viem';
 import { localhost } from '../constants';
 
-export const CONTRACT_ADDRESS = '0xc2c0c3398915a2d2e9c33c186abfef3192ee25e8' as const;
+export const CONTRACT_ADDRESS = '0x79b994d378518eae46917aa19f05ce6545faac26' as const;
 export { abi, localhost };
 
 // Initialize contract
@@ -26,7 +26,6 @@ export const initializeContract = async (
       chain: localhost,
       account: address as `0x${string}`,
     });
-    console.log('[contract] Initialize contract transaction hash:', result);
   } catch (error) {
     console.error('[contract] Error initializing contract:', error);
     setError('Failed to initialize contract: ' + (error instanceof Error ? error.message : String(error)));
@@ -56,7 +55,7 @@ export const checkContractInitialization = async (
     if (!isInitialized) {
       setIsContractInitialized(false);
       setMinStake(BigInt(0));
-      return false;
+        return false;
     }
     const minStakeResult = await publicClient.readContract({
       address: CONTRACT_ADDRESS,
@@ -71,6 +70,7 @@ export const checkContractInitialization = async (
     return true;
   } catch (error) {
     setIsContractInitialized(false);
+    console.error('[contract] Error in checkContractInitialization:', error);
     return false;
   }
 };
@@ -82,86 +82,15 @@ export const fetchCellData = async (
   forceRefresh: boolean = false
 ): Promise<Cell | null> => {
   if (!publicClient) return null;
-  try {
+    try {
     let latestBlock = await publicClient.getBlockNumber();
     if (forceRefresh) {
       await new Promise(resolve => setTimeout(resolve, 500));
       latestBlock = await publicClient.getBlockNumber();
     }
-    // Define the expected shape of the cell data from the contract
-    type ContractCellData = {
-      player1: `0x${string}`;
-      player2: `0x${string}`;
-      stake: bigint;
-      totalRounds: bigint;
-      currentRound: bigint;
-      isComplete: boolean;
-      rounds: Array<{
-        roundNumber: bigint;
-        player1Move: boolean;
-        player2Move: boolean;
-        player1Payout: bigint;
-        player2Payout: bigint;
-        isComplete: boolean;
-      }>;
-    };
-
-    // Helper function to safely parse contract response
-    const parseContractResponse = (data: unknown): ContractCellData | null => {
-      if (!data || typeof data !== 'object') return null;
-      
-      const response = Array.isArray(data) ? data : [];
-      
-      const [
-        player1,
-        player2,
-        stake,
-        totalRounds,
-        currentRound,
-        isComplete,
-        rounds = []
-      ] = response as [
-        `0x${string}`,
-        `0x${string}`,
-        bigint,
-        bigint,
-        bigint,
-        boolean,
-        Array<{
-          roundNumber: bigint;
-          player1Move: boolean;
-          player2Move: boolean;
-          player1Payout: bigint;
-          player2Payout: bigint;
-          isComplete: boolean;
-        }>
-      ];
-      
-      return {
-        player1: player1 || '0x',
-        player2: player2 || '0x',
-        stake: BigInt(stake?.toString() || '0'),
-        totalRounds: BigInt(totalRounds?.toString() || '1'),
-        currentRound: BigInt(currentRound?.toString() || '0'),
-        isComplete: Boolean(isComplete),
-        rounds: Array.isArray(rounds) 
-          ? rounds.map(r => ({
-              roundNumber: BigInt(r?.roundNumber?.toString() || '0'),
-              player1Move: Boolean(r?.player1Move),
-              player2Move: Boolean(r?.player2Move),
-              player1Payout: BigInt(r?.player1Payout?.toString() || '0'),
-              player2Payout: BigInt(r?.player2Payout?.toString() || '0'),
-              isComplete: Boolean(r?.isComplete)
-            }))
-          : []
-      };
-    };
-
-    let contractData: ContractCellData | null = null;
     let attempts = 0;
     const maxAttempts = forceRefresh ? 3 : 1;
-    
-    while (!contractData && attempts < maxAttempts) {
+    while (attempts < maxAttempts) {
       attempts++;
       try {
         if (attempts > 1) {
@@ -174,30 +103,76 @@ export const fetchCellData = async (
           args: [BigInt(cellId)],
           blockNumber: latestBlock,
         });
-        
-        contractData = parseContractResponse(result);
-        
-        if (!contractData) {
-          console.error('Invalid cell data format:', result);
+        const [player1, player2, stake, totalRounds, currentRound, isComplete] = result as [
+          `0x${string}`,
+          `0x${string}`,
+          bigint,
+          number,
+          number,
+          boolean
+        ];
+
+        // Filter out cells that are not actually created (both players are zero address)
+        const zeroAddress = '0x0000000000000000000000000000000000000000';
+        if ((player1 === zeroAddress) && (player2 === zeroAddress)) {
           return null;
+        }
+
+        // Only fetch rounds up to currentRound
+        const rounds: any[] = [];
+        for (let i = 1; i <= Number(currentRound); i++) {
+          const roundResult = await publicClient.readContract({
+            address: CONTRACT_ADDRESS,
+            abi,
+            functionName: 'getRoundResult',
+            args: [BigInt(cellId), i],
+            blockNumber: latestBlock,
+          });
+          let [p1Move, p2Move, p1Payout, p2Payout] = roundResult as [number, number, bigint, bigint];
+
+          let isFinished = false;
+          let parsedP1Move: number | null = null;
+          let parsedP2Move: number | null = null;
+          let parsedP1Payout = BigInt(0);
+          let parsedP2Payout = BigInt(0);
+
+          if (p1Move === 0 && p2Move === 0 && p1Payout === BigInt(0) && p2Payout === BigInt(0)) {
+            // No moves submitted yet, round is not finished
+            parsedP1Move = null;
+            parsedP2Move = null;
+            parsedP1Payout = BigInt(0);
+            parsedP2Payout = BigInt(0);
+            isFinished = false;
+          } else {
+            // If not all zero, treat -1 as null, 0/1 as valid moves
+            parsedP1Move = p1Move === -1 ? null : p1Move;
+            parsedP2Move = p2Move === -1 ? null : p2Move;
+            parsedP1Payout = BigInt(p1Payout);
+            parsedP2Payout = BigInt(p2Payout);
+            // Mark as finished if payouts are nonzero
+            isFinished = (parsedP1Payout !== BigInt(0) || parsedP2Payout !== BigInt(0));
+          }
+
+          // Always add a round for every round number up to currentRound
+          rounds.push({
+            roundNumber: i,
+            player1Move: parsedP1Move,
+            player2Move: parsedP2Move,
+            player1Payout: parsedP1Payout,
+            player2Payout: parsedP2Payout,
+            isComplete: isFinished
+          });
         }
 
         const cell: Cell = {
           id: cellId,
-          player1: contractData.player1 || '0x',
-          player2: contractData.player2 || '0x',
-          stake: contractData.stake,
-          totalRounds: Number(contractData.totalRounds),
-          currentRound: Number(contractData.currentRound),
-          isComplete: contractData.isComplete || false,
-          rounds: contractData.rounds.map(round => ({
-            roundNumber: Number(round.roundNumber),
-            player1Move: round.player1Move ? 1 : 0,
-            player2Move: round.player2Move ? 1 : 0,
-            player1Payout: BigInt(round.player1Payout),
-            player2Payout: BigInt(round.player2Payout),
-            isComplete: round.isComplete
-          })),
+          player1: player1 || '0x',
+          player2: player2 || '0x',
+          stake: BigInt(stake?.toString() || '0'),
+          totalRounds: Number(totalRounds),
+          currentRound: Number(currentRound),
+          isComplete: Boolean(isComplete),
+          rounds,
           createdAt: Date.now(),
           updatedAt: Date.now()
         };
@@ -207,16 +182,32 @@ export const fetchCellData = async (
         if (error.message?.includes('Cell does not exist')) {
           return null;
         }
-        console.error('Error fetching cell data:', error);
         if (attempts >= maxAttempts) {
           return null;
         }
       }
     }
-
     return null;
   } catch (error) {
-    console.error('Error in fetchCellData:', error);
     return null;
   }
+};
+
+// Poll contract initialization status every intervalMs milliseconds
+export const startContractInitializationPolling = (
+  publicClient: PublicClient | null,
+  setIsContractInitialized: (v: boolean) => void,
+  setMinStake: (v: bigint) => void,
+  setError: (msg: string | null) => void,
+  intervalMs: number = 5000
+) => {
+  let polling = true;
+  const poll = async () => {
+    if (!polling) return;
+    await checkContractInitialization(publicClient, setIsContractInitialized, setMinStake, setError);
+    setTimeout(poll, intervalMs);
+  };
+  poll();
+  // Return a function to stop polling
+  return () => { polling = false; };
 };

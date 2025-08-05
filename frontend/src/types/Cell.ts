@@ -5,6 +5,8 @@ export interface Round {
   player1Payout: bigint;
   player2Payout: bigint;
   isComplete: boolean;
+  gameId?: string;
+  result?: any;
 }
 
 export interface Cell {
@@ -17,7 +19,7 @@ export interface Cell {
   rounds: Round[];
   isComplete: boolean;
   createdAt: number;
-  updatedAt: number;
+  updatedAt?: number;
 }
 
 export interface RoundResult {

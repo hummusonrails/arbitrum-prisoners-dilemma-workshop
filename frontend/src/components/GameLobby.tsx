@@ -43,15 +43,7 @@ const GameLobby: React.FC<GameLobbyProps> = ({
     // A cell is open if it has one player and is not complete
     const hasOnePlayer = !isEmptyAddress(cell.player1) && isEmptyAddress(cell.player2);
     const isComplete = Boolean(cell.isComplete);
-    
-    console.log(`Open check - Cell ${cell.id}:`, {
-      player1: cell.player1,
-      player2: cell.player2,
-      isComplete,
-      hasOnePlayer,
-      shouldShow: !isComplete && hasOnePlayer
-    });
-    
+        
     return !isComplete && hasOnePlayer;
   });
   
@@ -62,30 +54,14 @@ const GameLobby: React.FC<GameLobbyProps> = ({
     const isUserInCell = userAddress && 
       (String(cell.player1 || '').toLowerCase() === userAddress.toLowerCase() || 
        String(cell.player2 || '').toLowerCase() === userAddress.toLowerCase());
-    
-    console.log(`Active check - Cell ${cell.id}:`, {
-      player1: cell.player1,
-      player2: cell.player2,
-      isComplete,
-      hasTwoPlayers,
-      isUserInCell,
-      shouldShow: !isComplete && hasTwoPlayers && isUserInCell
-    });
-    
+        
     return !isComplete && hasTwoPlayers && isUserInCell;
   });
   
   const completedCells = cells.filter(cell => {
     // A cell is completed if isComplete is true
     const isComplete = Boolean(cell.isComplete);
-    
-    console.log(`Completed check - Cell ${cell.id}:`, {
-      player1: cell.player1,
-      player2: cell.player2,
-      isComplete,
-      shouldShow: isComplete
-    });
-    
+        
     return isComplete;
   });
 
@@ -158,17 +134,17 @@ const GameLobby: React.FC<GameLobbyProps> = ({
               placeholder={`Minimum: ${formatEther(minStake)} ETH`}
               className="flex-1 p-3 rounded bg-gray-800 text-white border-2 border-gray-700 focus:border-yellow-500 focus:ring-2 focus:ring-yellow-500/50 outline-none transition-all"
             />
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 justify-center sm:flex-row sm:items-center">
               <button
                 onClick={handleCreateCell}
                 disabled={loading}
-                className="px-6 py-3 bg-yellow-700 hover:bg-yellow-600 text-white font-bold rounded border-2 border-yellow-800 hover:border-yellow-700 shadow-lg hover:shadow-yellow-900/50 transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+                className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white px-8 py-4 rounded-xl font-black text-lg tracking-wider transition-all duration-300 transform hover:scale-110 hover:shadow-2xl border-2 border-red-400/50 hover:border-red-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
               >
                 {loading ? 'CONSTRUCTING...' : 'CONSTRUCT CELL'}
               </button>
               <button
                 onClick={() => setShowCreateForm(false)}
-                className="px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium rounded border-2 border-gray-700 hover:border-gray-600 transition-colors"
+                className="bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-600 hover:to-gray-800 text-white px-8 py-4 rounded-xl font-black text-lg tracking-wider transition-all duration-300 border-2 border-gray-500/50 hover:border-gray-400"
               >
                 CANCEL
               </button>
@@ -227,10 +203,6 @@ const GameLobby: React.FC<GameLobbyProps> = ({
                     <span className="text-gray-400">Stake:</span>
                     <span className="font-mono text-yellow-300">{formatEther(cell.stake)} ETH</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Rounds:</span>
-                    <span className="font-mono">{cell.totalRounds}</span>
-                  </div>
                 </div>
                 {canJoinCell(cell) ? (
                   <button
@@ -261,7 +233,8 @@ const GameLobby: React.FC<GameLobbyProps> = ({
                 ) : isUserInCell(cell) ? (
                   <button
                     onClick={() => onEnterCell(cell.id)}
-                    className="w-full py-3 bg-blue-700 hover:bg-blue-600 text-white font-bold rounded border-2 border-blue-800 hover:border-blue-700 shadow-lg hover:shadow-blue-900/50 transform hover:scale-105 transition-all"
+                    disabled
+                    className="w-full py-3 group relative bg-gradient-to-r from-red-600 to-red-700 text-white font-black text-lg rounded-xl tracking-wider border-2 border-red-400/50 opacity-50 cursor-not-allowed"
                   >
                     ENTER CELL
                   </button>
@@ -276,9 +249,9 @@ const GameLobby: React.FC<GameLobbyProps> = ({
         ) : (
           <div className="text-center py-10 bg-gray-900/50 rounded-xl border-2 border-dashed border-gray-800">
             <p className="text-gray-500 text-lg">No open cells found.</p>
-            <button 
+            <button
               onClick={() => setShowCreateForm(true)}
-              className="mt-4 px-6 py-2 bg-yellow-700 hover:bg-yellow-600 text-white font-medium rounded border-2 border-yellow-800 hover:border-yellow-700 transition-colors"
+              className="group relative bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white px-8 py-4 rounded-xl font-black text-lg tracking-wider transition-all duration-300 transform hover:scale-110 hover:shadow-2xl border-2 border-red-400/50 hover:border-red-300 mt-4"
             >
               CONSTRUCT NEW CELL
             </button>
@@ -311,7 +284,7 @@ const GameLobby: React.FC<GameLobbyProps> = ({
                   <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-800">
                     <span className="font-mono text-yellow-400">CELL #{cell.id}</span>
                     <span className="px-2 py-1 bg-gray-800 text-blue-400 text-xs font-bold rounded">
-                      ROUND {cell.currentRound}/{cell.totalRounds}
+                      ROUND {cell.currentRound}
                     </span>
                   </div>
                   <div className="space-y-2 mb-5">
@@ -329,7 +302,10 @@ const GameLobby: React.FC<GameLobbyProps> = ({
                   </div>
                   <button
                     onClick={() => onEnterCell(cell.id)}
-                    className="w-full py-3 bg-blue-700 hover:bg-blue-600 text-white font-bold rounded border-2 border-blue-800 hover:border-blue-700 shadow-lg hover:shadow-blue-900/50 transform hover:scale-105 transition-all"
+                    className="w-full py-3 px-6 rounded-xl font-bold text-lg transition-colors duration-200
+                      bg-gradient-to-r from-yellow-400 to-yellow-600 text-gray-900 shadow-md
+                      disabled:bg-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed
+                      hover:from-yellow-500 hover:to-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                   >
                     ENTER CELL
                   </button>
@@ -351,10 +327,14 @@ const GameLobby: React.FC<GameLobbyProps> = ({
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {completedCells.slice(0, 3).map((cell) => {
-              const didWin = cell.rounds.some(round => 
-                (cell.player1?.toLowerCase() === userAddress?.toLowerCase() && round.player1Payout > 0) ||
-                (cell.player2?.toLowerCase() === userAddress?.toLowerCase() && round.player2Payout > 0)
-              );
+              // Determine win/lose based on payouts in the final round
+              const finalRound = cell.rounds[cell.rounds.length - 1];
+              let didWin = false;
+              if (cell.player1?.toLowerCase() === userAddress?.toLowerCase()) {
+                didWin = finalRound.player1Payout > finalRound.player2Payout;
+              } else if (cell.player2?.toLowerCase() === userAddress?.toLowerCase()) {
+                didWin = finalRound.player2Payout > finalRound.player1Payout;
+              }
               
               return (
                 <div key={cell.id} className="bg-gray-900/50 p-5 rounded-xl border-2 border-gray-800 hover:border-gray-700 transition-colors">
@@ -368,7 +348,7 @@ const GameLobby: React.FC<GameLobbyProps> = ({
                       {didWin ? 'VICTORY' : 'DEFEAT'}
                     </span>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 mb-4">
                     <div className="flex justify-between">
                       <span className="text-gray-400">Stake:</span>
                       <span className="font-mono text-yellow-300">{formatEther(cell.stake)} ETH</span>
@@ -379,11 +359,20 @@ const GameLobby: React.FC<GameLobbyProps> = ({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Result:</span>
-                      <span className={`font-mono ${didWin ? 'text-green-400' : 'text-red-400'}`}>
+                      <span className={`font-mono ${didWin ? 'text-green-400' : 'text-red-400'}`}> 
                         {didWin ? 'WON' : 'LOST'}
                       </span>
                     </div>
                   </div>
+                  <button
+                    onClick={() => onEnterCell(cell.id)}
+                    className="w-full py-3 px-6 rounded-xl font-bold text-lg transition-colors duration-200
+                      bg-gradient-to-r from-green-400 to-green-600 text-gray-900 shadow-md
+                      disabled:bg-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed
+                      hover:from-green-500 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-green-400"
+                  >
+                    ENTER CELL
+                  </button>
                 </div>
               );
             })}

@@ -52,28 +52,22 @@ const CellView: React.FC<CellViewProps> = ({
   };
 
   const getCurrentRound = (): Round | null => {
-    // Get the most recent round that exists
+    // If backend has incremented currentRound but frontend hasn't fetched the new round yet, force refresh
+    if (cell.rounds.length < cell.currentRound) {
+      onRefresh();
+      return null;
+    }
     if (cell.rounds.length === 0) return null;
-    return cell.rounds[cell.rounds.length - 1] || null;
+    return cell.rounds[cell.currentRound - 1] || null;
   };
 
   const canMakeMove = (): boolean => {
     if (!isParticipant || cell.isComplete) return false;
-    
+    const currentRound = getCurrentRound();
+    // If the round is complete, do not allow moves
+    if (!currentRound || currentRound.isComplete) return false;
     // If we need continuation decisions, can't make moves yet
     if (needsContinuationDecision()) return false;
-    
-    const currentRound = getCurrentRound();
-    if (!currentRound) {
-      // For the first round, if both players are in the cell and currentRound is 1, allow moves
-      return cell.player1 !== '0x0000000000000000000000000000000000000000' && 
-             cell.player2 !== '0x0000000000000000000000000000000000000000' && 
-             cell.currentRound === 1;
-    }
-    
-    // Can't make moves on completed rounds
-    if (currentRound.isComplete) return false;
-    
     // Check if this player has already made their move in the current round
     const playerMove = isPlayer1 ? currentRound.player1Move : currentRound.player2Move;
     return playerMove === null;
@@ -81,23 +75,11 @@ const CellView: React.FC<CellViewProps> = ({
 
   const needsContinuationDecision = (): boolean => {
     if (!isParticipant || cell.isComplete) return false;
-    
     // Check if we've reached max rounds
     if (cell.currentRound >= cell.totalRounds) return false;
-    
     const currentRound = getCurrentRound();
-    if (!currentRound || !currentRound.isComplete) return false;
-    
-    // If the most recent round is complete but we haven't advanced to the next round yet,
-    // and there are more rounds to play, then we need continuation decisions
-    const expectedNextRound = cell.rounds.length + 1;
-    const needsNextRound = expectedNextRound <= cell.totalRounds;
-    
-    // We need continuation decisions if:
-    // 1. The current round is complete
-    // 2. We haven't reached the max rounds yet
-    // 3. The next round hasn't been created yet (rounds.length < currentRound)
-    return needsNextRound && cell.rounds.length < cell.currentRound + 1;
+    // Show continuation dialog if the current round is complete and cell is not complete
+    return !!currentRound && currentRound.isComplete && !cell.isComplete;
   };
 
   const handleMoveClick = (move: number) => {
@@ -297,7 +279,14 @@ const CellView: React.FC<CellViewProps> = ({
       {!cell.isComplete && (
         <div className="bg-gray-900 p-6 border-b border-gray-700">
           <h2 className="text-xl font-bold text-white mb-4">Current Round</h2>
-          {needsContinuationDecision() && (
+          {getCurrentRound() === null ? (
+            <div className="text-center py-8">
+              <div className="inline-flex items-center gap-3 bg-black/50 px-6 py-3 rounded-xl border border-orange-500/30">
+                <div className="w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+                <span className="text-orange-300 font-mono tracking-wider">Syncing new round...</span>
+              </div>
+            </div>
+          ) : needsContinuationDecision() && (
             <div className="relative z-20 bg-gradient-to-br from-orange-900 via-orange-800 to-orange-900 border-2 border-orange-500/50 rounded-2xl shadow-2xl p-6 mt-4">
               <div className="absolute inset-0 bg-gradient-to-r from-orange-400/10 to-red-400/10 rounded-2xl blur-xl" />
               <div className="relative z-10">
@@ -350,8 +339,7 @@ const CellView: React.FC<CellViewProps> = ({
               </div>
             </div>
           )}
-
-          {!canMakeMove() && !needsContinuationDecision() && !cell.isComplete && (
+          {!canMakeMove() && !needsContinuationDecision() && !cell.isComplete && getCurrentRound() !== null && (
             <div className="text-center text-gray-400 py-8">
               <p>Waiting for other player or round completion...</p>
             </div>

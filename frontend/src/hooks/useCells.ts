@@ -37,14 +37,13 @@ export function useCells({ publicClient, isContractInitialized }: UseCellsOption
     try {
       const latestBlock = await publicClient.getBlockNumber();
       
+
       const cellCounter = await publicClient.readContract({
         address: CONTRACT_ADDRESS,
         abi,
         functionName: 'getCellCounter',
-        args: [],
-        blockNumber: latestBlock,
-      }) as bigint;
-      
+        args: []
+      }) as bigint;      
       const cellIds = Array.from({ length: Number(cellCounter) }, (_, i) => (i + 1).toString());
       
       const cellsFetched = await Promise.all(
@@ -59,12 +58,19 @@ export function useCells({ publicClient, isContractInitialized }: UseCellsOption
         })
       );
       
-      const validCells = cellsFetched.filter(Boolean) as Cell[];
+      // Filter out cells that are not actually created (both players are zero address)
+      const zeroAddress = '0x0000000000000000000000000000000000000000';
+      const validCells = (cellsFetched.filter(Boolean) as Cell[]).filter(cell => {
+        return !(cell.player1 === zeroAddress && cell.player2 === zeroAddress);
+      });
       setCells(validCells);
       
       if (activeCell) {
         const updatedActiveCell = validCells.find(cell => cell.id === activeCell.id);
-        setActiveCell(updatedActiveCell || null);
+        // Always update activeCell with latest contract state, even if completed
+        if (updatedActiveCell) {
+          setActiveCell(updatedActiveCell);
+        }
       }
     } catch (error) {
       console.error('Error updating cells state:', error);
@@ -95,6 +101,39 @@ export function useCells({ publicClient, isContractInitialized }: UseCellsOption
     setLoading,
     moveLoading,
     setMoveLoading,
-    updateCellsState,
-  };
-}
+    try {
+      const latestBlock = await publicClient.getBlockNumber();
+      const cellCounter = await publicClient.readContract({
+        address: CONTRACT_ADDRESS,
+        abi,
+        functionName: 'getCellCounter',
+        args: [],
+      }) as bigint;
+      const cellIds = Array.from({ length: Number(cellCounter) }, (_, i) => (i + 1).toString());
+      const cellsFetched = await Promise.all(
+        cellIds.map(async (id) => {
+          try {
+            const cell = await fetchCellData(publicClient, id);
+            return cell;
+          } catch (err) {
+            return null;
+          }
+        })
+      );
+      // Filter out cells that are not actually created (both players are zero address)
+      const zeroAddress = '0x0000000000000000000000000000000000000000';
+      const validCells = (cellsFetched.filter(Boolean) as Cell[]).filter(cell => {
+        return !(cell.player1 === zeroAddress && cell.player2 === zeroAddress);
+      });
+      setCells(validCells);
+      if (activeCell) {
+        const updatedActiveCell = validCells.find(cell => cell.id === activeCell.id);
+        if (updatedActiveCell) {
+          setActiveCell(updatedActiveCell);
+        }
+      }
+    } catch (error) {
+      setError(`Failed to update cells: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setLoading(false);
+    }
