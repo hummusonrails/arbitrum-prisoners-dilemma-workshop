@@ -3,10 +3,8 @@ import React from 'react';
 const Footer: React.FC = () => {
   return (
     <footer className="relative z-20 mt-16 border-t-2 border-gray-700/50">
-      {/* Prison bars effect */}
       <div className="absolute inset-0 bg-gradient-to-b from-gray-900/80 to-black/90 backdrop-blur-sm">
         <div className="absolute inset-0 opacity-20">
-          {/* Vertical bars pattern */}
           {Array.from({ length: 20 }).map((_, i) => (
             <div
               key={i}
@@ -35,7 +33,6 @@ const Footer: React.FC = () => {
               </a>
             </p>
             
-            {/* Decorative elements */}
             <div className="flex justify-center items-center space-x-4 mt-4 pt-4 border-t border-gray-700/50">
               <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
               <div className="text-gray-500 font-mono text-sm tracking-widest">
@@ -45,7 +42,6 @@ const Footer: React.FC = () => {
             </div>
           </div>
           
-          {/* Bottom shadow effect */}
           <div className="mt-4 text-center">
             <div className="inline-block text-gray-600 font-mono text-xs tracking-wider opacity-60">
               █▓▒░ ESCAPE IS IMPOSSIBLE ░▒▓█
