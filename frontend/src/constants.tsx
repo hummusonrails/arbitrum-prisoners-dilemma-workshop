@@ -12,13 +12,11 @@ export const localhost = defineChain({
   },
   rpcUrls: {
     default: {
-      // Using 127.0.0.1 instead of localhost for better MetaMask compatibility
-      http: ['http://127.0.0.1:8547'],
+      http: ['http://localhost:8547'],
       webSocket: ['ws://127.0.0.1:8547']
     },
     public: {
-      // Using 127.0.0.1 instead of localhost for better MetaMask compatibility
-      http: ['http://127.0.0.1:8547'],
+      http: ['http://localhost:8547'],
       webSocket: ['ws://127.0.0.1:8547']
     },
   },
