@@ -1,7 +1,7 @@
-# 🎯 Arbitrum Prisoner's Dilemma Workshop
+# 🎯 Arbitrum Prisoner's Dilemma Iterated Game Workshop
 
 > [!NOTE]
-> Learn game theory and smart contract development on Arbitrum using Stylus (Rust). Build and deploy a multiplayer Prisoner's Dilemma game with strategic decision-making and token staking. All in a preconfigured Codespace!
+> Learn game theory and smart contract development on Arbitrum using Stylus (Rust). Build and deploy a multiplayer, iterated Prisoner's Dilemma game with strategic decision-making, token staking, and multiple rounds per match. All in a preconfigured Codespace!
 
 <div align="center">
   <img src="screenshot.png" alt="Prisoner's Dilemma Game Screenshot" width="50%">
@@ -11,22 +11,25 @@
 |---|
 | Understand game theory and the Prisoner's Dilemma |
 | Deploy and interact with Stylus (Rust) smart contracts on Arbitrum |
-| Implement strategic multiplayer games with token staking |
+| Implement strategic multiplayer games with token staking and multiple rounds |
 | Use cargo stylus, foundry (cast), and viem + wagmi |
-| Connect game contracts to a React + Vite + TypeScript frontend |
-| Practice contract interaction patterns and state management |
+| Connect game contracts to a React + Vite + TypeScript frontend with real-time state updates |
+| Practice contract interaction patterns, state management, and iterative game logic |
 
-## 🎮 Game Rules: The Prisoner's Dilemma
+## 🎮 Game Rules: Iterated Prisoner's Dilemma
 
-The Prisoner's Dilemma is a classic game theory scenario where two players must choose between **cooperation** and **defection** without knowing the other's choice.
+
+The Iterated Prisoner's Dilemma is a classic game theory scenario where two players repeatedly choose between **cooperation** and **defection** over multiple rounds, without knowing the other's choice in each round. This version introduces strategic depth, as players can adapt their choices based on previous outcomes.
 
 ### How It Works
 
-1. **Join a Game**: Players stake ETH to create or join a game
-2. **Make Your Choice**: Each player secretly chooses to **Cooperate** (0) or **Defect** (1)
-3. **Reveal & Win**: Once both players submit moves, payouts are distributed based on the outcome
+1. **Join a Cell**: Players stake ETH to create or join a cell (game instance). Each cell is assigned a random number of rounds (between 2 and 5) for iterated play.
+2. **Play Rounds**: In each round, both players secretly choose to **Cooperate** (0) or **Defect** (1). Choices are revealed simultaneously.
+3. **Continue or Exit**: After each round, both players must independently decide whether to continue to the next round or exit. The game continues only if both agree and the maximum rounds for the cell have not been reached.
+4. **Payouts & Results**: After the final round or if a player exits, payouts are distributed based on the cumulative results of all rounds played in the cell.
 
-### Payoff Matrix
+
+### Payoff Matrix (Per Round)
 
 | Your Move | Opponent's Move | Your Payout | Opponent's Payout |
 |-----------|-----------------|-------------|-------------------|
@@ -35,13 +38,17 @@ The Prisoner's Dilemma is a classic game theory scenario where two players must 
 | 💀 Defect | 🤝 Cooperate | **1.5x stake** | **0.5x stake** |
 | 💀 Defect | 💀 Defect | **0.5x stake** | **0.5x stake** |
 
-### Strategic Considerations
 
-- **Mutual Cooperation**: Both players get a fair return (1.0x)
-- **Mutual Defection**: Both players lose (0.5x) - the "tragedy" of the dilemma
-- **Mixed Strategies**: The defector wins big (1.5x), but the cooperator loses (0.5x)
+### Iterative Strategic Considerations
 
-**The Dilemma**: While mutual cooperation yields the best collective outcome, individual incentives push toward defection!
+- **Memory & Adaptation**: Players can adjust their strategy based on previous rounds (e.g., tit-for-tat, always defect, always cooperate).
+- **Continuation Decisions**: After each round, both players must opt-in to continue. If either declines, the cell ends and payouts are distributed.
+- **Randomized Rounds**: Each cell has a random number of rounds (2-5), so players cannot always predict when the game will end, increasing strategic uncertainty.
+- **Mutual Cooperation**: Both players get a fair return (1.0x per round)
+- **Mutual Defection**: Both players lose (0.5x per round) - the "tragedy" of the dilemma
+- **Mixed Strategies**: The defector wins big (1.5x per round), but the cooperator loses (0.5x per round)
+
+**The Dilemma**: While mutual cooperation yields the best collective outcome, individual incentives push toward defection—especially in the final round!
 
 ## Quick Start (GitHub Codespaces)
 
@@ -78,19 +85,30 @@ For running locally:
 
 ```bash
 contracts/
-└── prisoners-dilemma/    # Stylus (Rust) Prisoner's Dilemma contract
-    ├── src/lib.rs        # Main contract implementation
-    ├── Cargo.toml        # Rust dependencies
-    └── package.json      # Build and deploy scripts
-frontend/                 # React + Vite + TS frontend
-├── src/
-│   ├── components/       # Game UI components
-│   ├── contexts/         # Web3 context and state
-│   └── config/           # Contract addresses and config
-nitro-devnode/            # Local Arbitrum node setup
+└── prisoners-dilemma/         # Stylus (Rust) Prisoner's Dilemma contract
+  ├── src/
+  │   ├── lib.rs             # Main contract implementation
+  │   └── main.rs            # (if present, entry point for bin)
+  ├── Cargo.toml             # Rust dependencies
+  ├── rust-toolchain.toml    # Rust toolchain config
+  ├── package.json           # Build and deploy scripts
+  └── target/                # Build output
+frontend/                      # React + Vite + TS frontend
+├── public/
+└── src/
+  ├── abi/                   # Contract ABI
+  │   └── PrisonersDilemmaContract.json
+  ├── components/            # Game UI components (CellView, GameLobby, MoveButtons, etc.)
+  ├── contexts/              # Web3 context and state
+  ├── hooks/                 # Custom hooks for cell/game state
+  ├── lib/                   # Contract interaction logic (contract.ts)
+  ├── types/                 # TypeScript types
+  ├── utils/                 # CellManager and helpers for round/cell logic
+  ├── App.tsx
+nitro-devnode/                 # Local Arbitrum node
 scripts/
-├── funds.sh              # Fund test accounts
-└── package.json          # Script utilities
+├── funds.sh                   # Fund test accounts
+└── package.json               # Script utilities
 ```
 
 ## Workshop Exercises
@@ -122,7 +140,7 @@ pnpm --filter prisoners-dilemma-contract deploy:local
 
 * **Important**: Copy the deployed contract address from the output for later use.
 
-### 4. Export Contract ABI
+### 4. Export Contract ABI (for Frontend Integration)
 
 * Use cargo stylus to export the ABI for frontend integration:
 
@@ -136,17 +154,17 @@ cargo stylus export-abi --json > ../../frontend/src/abi/PrisonersDilemma.json
 ### 5. Connect Frontend to Contract
 
 * The frontend is in `frontend/`.
-* Update the contract address in your `App.tsx` file:
+* Update the contract address in your `contract.ts` file:
 
 ```typescript
-// frontend/src/App.tsx
+// frontend/src/lib/contract.ts
 const CONTRACT_ADDRESS = '0x...' as `0x${string}`;
 ```
 
-### 6. Frontend Development Workshop 🌐
+### 6. Frontend Development Workshop 🌐 (Iterated Game)
 
 > [!TIP]
-> **Main Learning Focus**: The contract is complete! Your task is to study and understand the game theory implementation and Web3 integration patterns.
+> **Main Learning Focus**: The contract is complete! Your task is to study and understand the iterated game theory implementation, continuation logic, and Web3 integration patterns.
 
 #### 📚 **Learning Objectives**
 - Master strategic game interactions on blockchain
@@ -159,29 +177,28 @@ const CONTRACT_ADDRESS = '0x...' as `0x${string}`;
 
 The frontend demonstrates advanced game mechanics:
 
-**1. Strategic Decision Making**
-- 📋 **Task 1**: Explore the cooperate vs defect choice interface
-- 🔗 **Task 2**: Study move submission and commitment schemes
-- 📊 **Task 3**: Learn how to handle simultaneous move revelation
+**1. Iterated Strategic Decision Making**
+- 📋 **Task 1**: Explore the cooperate vs defect choice interface for each round
+- � **Task 2**: Study how continuation decisions are handled after each round
+- � **Task 3**: Learn how the frontend and contract keep all players in sync across rounds
 
-**2. Payout Distribution**
-- 📖 **Task 1**: Understand automatic ETH payout calculations
-- ✍️ **Task 2**: Study the payoff matrix implementation
-- 🎯 **Task 3**: Learn transaction confirmation patterns
 
-#### 🎯 **Game Theory Learning Points**
+**2. Iterated Payout Distribution**
+- 📖 **Task 1**: Understand cumulative ETH payout calculations across multiple rounds
+- ✍️ **Task 2**: Study the payoff matrix implementation per round and for the final cell
+- 🎯 **Task 3**: Learn transaction confirmation and state update patterns for multi-round games
 
-**Nash Equilibrium**
-- Both players defecting is the Nash equilibrium
-- Neither player can improve by unilaterally changing strategy
+#### 🎯 **Iterated Game Theory Learning Points**
+
+**Nash Equilibrium (Iterated)**
+- Both players defecting in every round is the Nash equilibrium, but strategies like tit-for-tat can outperform in repeated play.
 
 **Pareto Efficiency**
-- Mutual cooperation is Pareto optimal (best collective outcome)
-- But individual incentives prevent this outcome
+- Mutual cooperation in every round is Pareto optimal (best collective outcome), but individual incentives and uncertainty about the final round often prevent this outcome.
 
 **Risk vs Reward**
-- Cooperation: Safe but vulnerable to exploitation
-- Defection: Aggressive but guarantees you won't be the "sucker"
+- Cooperation: Safe but vulnerable to exploitation, especially if the other player defects late.
+- Defection: Aggressive but may lose out on long-term gains if the other player retaliates.
 
 #### 🚀 **Workshop Tasks**
 1. **Play the Game**: Create games and test different strategies
@@ -190,7 +207,7 @@ The frontend demonstrates advanced game mechanics:
 4. **Test Edge Cases**: What happens with different stake amounts?
 5. **Explore Psychology**: How does knowing your opponent affect decisions?
 
-### 7. Start the Frontend
+### 7. Start the Frontend (with Real-Time Iterated Game UI)
 
 ```bash
 pnpm --filter frontend dev
@@ -253,11 +270,10 @@ pnpm --filter prisoners-dilemma-contract test
 **Codespaces RPC:**
 - Use the forwarded port URL from the "Ports" tab (e.g., `https://your-codespace-8547.app.github.dev`)
 
-## 🧠 Game Theory Insights
-
-### Why This Game Matters
+## 🧠 Iterated Game Theory Insights
 
 The Prisoner's Dilemma illustrates fundamental concepts in:
+
 - **Economics**: Market competition and cooperation
 - **Politics**: International relations and treaties
 - **Biology**: Evolution of cooperation
@@ -267,7 +283,7 @@ The Prisoner's Dilemma illustrates fundamental concepts in:
 
 1. **Always Cooperate**: Optimistic but vulnerable
 2. **Always Defect**: Pessimistic but safe
-3. **Tit-for-Tat**: Start cooperative, then mirror opponent
+3. **Tit-for-Tat**: Start cooperative, then mirror opponent's previous move
 4. **Random**: Unpredictable mixed strategy
 
 ### Real-World Applications
@@ -280,9 +296,9 @@ The Prisoner's Dilemma illustrates fundamental concepts in:
 ## 🧑‍💻 Workshop Tips
 
 - Use different accounts to simulate real multiplayer scenarios
-- Try various stake amounts to see how it affects decision-making
-- Experiment with different strategies and track outcomes
-- Consider the psychological aspects: How does anonymity affect choices?
-- Think about mechanism design: How could the game be modified to encourage cooperation?
+- Try various stake amounts and see how the number of rounds affects decision-making
+- Experiment with different strategies and track outcomes across multiple rounds
+- Consider the psychological aspects: How does anonymity and round uncertainty affect choices?
+- Think about mechanism design: How could the game be modified to encourage cooperation or longer play?
 
 Happy strategizing! 🎯
