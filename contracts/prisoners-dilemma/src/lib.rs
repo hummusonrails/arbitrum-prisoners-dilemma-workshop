@@ -139,19 +139,39 @@ impl PrisonersDilemma {
         let cell_id = self.cell_counter.get() + U256::from(1);
         self.cell_counter.set(cell_id);
         
-        let cell = Cell {
-            player1: sender,
-            player2: Address::ZERO,
-            stake_amount: stake,
-            total_rounds,
-            current_round: 0,
-            is_complete: false,
-            rounds: Vec::new(),
-            continuation_flags: 0,
-        };
-        
-        self.store_cell(cell_id, &cell);
-        self.player_to_cell.setter(sender).set(cell_id);
+        // TODO: Workshop Objective 1 - Create and store the new cell.
+        //
+        // As a workshop participant, your task is to initialize the `Cell` struct with the
+        // correct data and store it in the contract's state. This is a fundamental part
+        // of managing game state in a smart contract.
+        //
+        // Requirements:
+        // 1. Initialize a `Cell` struct. The `sender` is `player1`.
+        // 2. The `stake_amount` is the `stake` provided to the function.
+        // 3. `player2` should be an empty address for now: `Address::ZERO`.
+        // 4. `current_round` should start at 0, and `is_complete` should be `false`.
+        // 5. The `rounds` vector should be empty: `Vec::new()`.
+        //
+        // Example Syntax:
+        // let new_cell = Cell {
+        //     player1: /* address of the creator */,
+        //     player2: Address::ZERO,
+        //     stake_amount: /* value sent with the transaction */,
+        //     total_rounds: /* number of rounds from function input */,
+        //     current_round: 0,
+        //     is_complete: false,
+        //     rounds: Vec::new(),
+        //     continuation_flags: 0,
+        // };
+        //
+        // After creating the cell, you must store it using the helper function:
+        // self.store_cell(cell_id, &new_cell);
+        //
+        // Finally, map the player to the new cell ID:
+        // self.player_to_cell.insert(sender, cell_id);
+
+        // YOUR CODE HERE
+
         self.cell_stakes.setter(cell_id).set(stake);
         
     stylus_core::log(self.vm(), CellCreated { cell_id, player1: sender, stake });
@@ -396,31 +416,53 @@ impl PrisonersDilemma {
 
     fn resolve_round(&mut self, cell: &mut Cell, cell_id: U256, round_idx: usize) {
         let round = &mut cell.rounds[round_idx];
-        let p1_move = round.player1_move.unwrap();
-        let p2_move = round.player2_move.unwrap();
         let stake = cell.stake_amount;
-        
-        // Simplified payoff calculation
-        let (p1_payout, p2_payout) = match (p1_move, p2_move) {
-            (Move::Cooperate, Move::Cooperate) => (stake, stake),
-            (Move::Defect, Move::Defect) => (stake / U256::from(2), stake / U256::from(2)),
-            (Move::Cooperate, Move::Defect) => (stake / U256::from(2), stake + stake / U256::from(2)),
-            (Move::Defect, Move::Cooperate) => (stake + stake / U256::from(2), stake / U256::from(2)),
-        };
-        
-        round.player1_payout = p1_payout;
-        round.player2_payout = p2_payout;
-        round.is_finished = true;
-        
-        stylus_core::log(self.vm(), RoundComplete { cell_id, round_num: cell.current_round });
-        
-        // Check if we've completed all rounds
-        if cell.current_round >= cell.total_rounds {
-            self.complete_cell(cell, cell_id);
-        } else {
-            // Don't auto-advance - wait for continuation decisions
-            cell.continuation_flags = 0; // Reset for next decision
-        }
+
+        // TODO: Workshop Objective 2 - Implement the Payoff Logic & Experiment with Game Theory.
+        //
+        // This is the heart of the game. Your task is to define the rules that determine
+        // the consequences of players' actions. By changing these rules, you can dramatically
+        // alter the game's strategy and outcomes.
+        //
+        // The `Move` enum has two variants: `Move::Cooperate` and `Move::Defect`.
+        //
+        // **Part 1: Implement the Classic Prisoner's Dilemma**
+        // First, implement the standard payoff matrix:
+        // 1. If both Cooperate: Both get their original `stake` back (1.0x).
+        // 2. If both Defect: Both get half of their `stake` back (0.5x).
+        // 3. If one Cooperates and the other Defects: The defector gets 1.5x the `stake`,
+        //    and the cooperator gets only 0.5x back.
+        //
+        // **Part 2: Invent Your Own Rules!**
+        // After implementing the classic rules, get creative. This is your chance to be a game
+        // designer. What happens if you change the incentives?
+        //
+        // Experiment with new ideas:
+        // - **"Stag Hunt"**: Make mutual cooperation much more rewarding (e.g., 2.0x stake).
+        // - **"Game of Chicken"**: Make mutual defection the worst possible outcome (e.g., 0 stake).
+        // - **"Generous World"**: What if cooperating always returns at least the initial stake?
+        //
+        // **Requirements:**
+        // - Use a `match` statement on the tuple `(move1, move2)`.
+        // - Calculate payouts for `player1` and `player2` based on your chosen rules.
+        // - Assign results to `round.player1_payout` and `round.player2_payout`.
+        // - Set `round.is_finished = true` and log the `RoundComplete` event.
+        //
+        // Example Syntax:
+        // if let (Some(move1), Some(move2)) = (round.player1_move, round.player2_move) {
+        //     let (payout1, payout2) = match (move1, move2) {
+        //         (Move::Cooperate, Move::Cooperate) => (stake, stake), // Classic example
+        //         // ... implement the other cases for your rules ...
+        //     };
+        //
+        //     round.player1_payout = payout1;
+        //     round.player2_payout = payout2;
+        //     round.is_finished = true;
+        //
+        //     self.vm().log(RoundComplete { cell_id, round_num: (round_idx + 1) as u8 });
+        // }
+
+        // YOUR CODE HERE
     }
 
     fn complete_cell(&mut self, cell: &mut Cell, cell_id: U256) {

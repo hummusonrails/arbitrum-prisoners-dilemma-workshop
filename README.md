@@ -132,7 +132,12 @@ cd nitro-devnode
 ### 3. Build & Deploy Prisoner's Dilemma Contract
 
 * The Stylus contract is implemented in `contracts/prisoners-dilemma/src/lib.rs`.
-* Build and deploy locally:
+
+> [!WARNING]
+> The contract code is incomplete! Your first task is to complete the workshop objectives in `lib.rs`.
+> The `deploy:local` command below will **fail** until you complete the exercises.
+
+* Once you have completed the exercises, build and deploy locally:
 
 ```bash
 pnpm --filter prisoners-dilemma-contract deploy:local
@@ -161,53 +166,22 @@ cargo stylus export-abi --json > ../../frontend/src/abi/PrisonersDilemma.json
 const CONTRACT_ADDRESS = '0x...' as `0x${string}`;
 ```
 
-### 6. Frontend Development Workshop 🌐 (Iterated Game)
+### 6. Smart Contract Workshop
 
-> [!TIP]
-> **Main Learning Focus**: The contract is complete! Your task is to study and understand the iterated game theory implementation, continuation logic, and Web3 integration patterns.
+Your main task is to complete the missing pieces of the smart contract. Open `contracts/prisoners-dilemma/src/lib.rs` and look for the `TODO` comments. These are your workshop objectives.
 
-#### 📚 **Learning Objectives**
-- Master strategic game interactions on blockchain
-- Understand ETH staking and payout mechanisms
-- Learn game state management and real-time updates
-- Practice advanced contract interaction patterns
-- Explore game theory concepts in practice
+#### 🎯 Objective 1: Create a New Cell
+- **Location**: `create_cell` function.
+- **Task**: Initialize the `Cell` struct when a new game is created. This involves setting the initial players, stake, and round information.
 
-#### 🔍 **Study These Game Components**
+#### 🎯 Objective 2: Implement the Payoff Logic
+- **Location**: `resolve_round` function.
+- **Task**: This is the heart of the game! Implement the payoff matrix that determines player payouts based on their moves.
+- **Challenge**: Start with the classic Prisoner's Dilemma rules, then invent your own! See how changing the incentives alters player behavior. Will you create a world of total cooperation or endless conflict?
 
-The frontend demonstrates advanced game mechanics:
+Once you've completed the objectives, the contract should compile successfully. You can then proceed with the deployment and testing steps.
 
-**1. Iterated Strategic Decision Making**
-- 📋 **Task 1**: Explore the cooperate vs defect choice interface for each round
-- � **Task 2**: Study how continuation decisions are handled after each round
-- � **Task 3**: Learn how the frontend and contract keep all players in sync across rounds
-
-
-**2. Iterated Payout Distribution**
-- 📖 **Task 1**: Understand cumulative ETH payout calculations across multiple rounds
-- ✍️ **Task 2**: Study the payoff matrix implementation per round and for the final cell
-- 🎯 **Task 3**: Learn transaction confirmation and state update patterns for multi-round games
-
-#### 🎯 **Iterated Game Theory Learning Points**
-
-**Nash Equilibrium (Iterated)**
-- Both players defecting in every round is the Nash equilibrium, but strategies like tit-for-tat can outperform in repeated play.
-
-**Pareto Efficiency**
-- Mutual cooperation in every round is Pareto optimal (best collective outcome), but individual incentives and uncertainty about the final round often prevent this outcome.
-
-**Risk vs Reward**
-- Cooperation: Safe but vulnerable to exploitation, especially if the other player defects late.
-- Defection: Aggressive but may lose out on long-term gains if the other player retaliates.
-
-#### 🚀 **Workshop Tasks**
-1. **Play the Game**: Create games and test different strategies
-2. **Analyze Outcomes**: Track your wins/losses with different approaches
-3. **Study Incentives**: Understand why players might choose each strategy
-4. **Test Edge Cases**: What happens with different stake amounts?
-5. **Explore Psychology**: How does knowing your opponent affect decisions?
-
-### 7. Start the Frontend (with Real-Time Iterated Game UI)
+### 7. Start the Frontend
 
 ```bash
 pnpm --filter frontend dev
