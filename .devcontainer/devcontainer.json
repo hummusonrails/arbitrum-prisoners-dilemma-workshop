@@ -10,7 +10,7 @@
     "ghcr.io/devcontainers/features/git:1": {}
   },
 
-  "postAttachCommand": "rustup install nightly-2025-09-15 && rustup default nightly-2025-09-15 && rustup target add wasm32-unknown-unknown && npm install -g pnpm && pnpm install -r && cargo install --force cargo-stylus && curl -L https://foundry.paradigm.xyz | bash && /home/vscode/.foundry/bin/foundryup",
+  "postAttachCommand": "sudo apt-get update && sudo apt-get install -y pipx python3-venv && pipx ensurepath --force && export PATH=$HOME/.local/bin:$PATH && pipx install solc-select && solc-select install 0.8.29 && solc-select use 0.8.29 && rustup install nightly-2025-09-15 && rustup default nightly-2025-09-15 && rustup target add wasm32-unknown-unknown && npm install -g pnpm && pnpm install -r && cargo install --force cargo-stylus && curl -L https://foundry.paradigm.xyz | bash && /home/vscode/.foundry/bin/foundryup",
 
   "customizations": {
     "vscode": {
