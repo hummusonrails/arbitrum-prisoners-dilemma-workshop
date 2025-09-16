@@ -233,8 +233,7 @@ const GameLobby: React.FC<GameLobbyProps> = ({
                 ) : isUserInCell(cell) ? (
                   <button
                     onClick={() => onEnterCell(cell.id)}
-                    disabled
-                    className="w-full py-3 group relative bg-gradient-to-r from-red-600 to-red-700 text-white font-black text-lg rounded-xl tracking-wider border-2 border-red-400/50 opacity-50 cursor-not-allowed"
+                    className="w-full py-3 group relative bg-gradient-to-r from-yellow-400 to-yellow-600 text-gray-900 font-black text-lg rounded-xl tracking-wider border-2 border-yellow-400/50 hover:from-yellow-500 hover:to-yellow-700"
                   >
                     ENTER CELL
                   </button>
