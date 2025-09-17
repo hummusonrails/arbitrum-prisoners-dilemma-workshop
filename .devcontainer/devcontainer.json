@@ -1,6 +1,6 @@
 {
   "name": "Arbitrum Stylus Prisoners Dilemma Workshop",
-  "image": "mcr.microsoft.com/devcontainers/rust:1-bookworm",
+  "image": "ghcr.io/hummusonrails/devcontainer-stylus-workshops-base:bookworm",
 
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
