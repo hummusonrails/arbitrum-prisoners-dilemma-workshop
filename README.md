@@ -54,7 +54,7 @@ The Iterated Prisoner's Dilemma is a classic game theory scenario where two play
 
 Run the workshop in a preconfigured Codespace — no setup required!
 
-[![Open in Codespaces](https://img.shields.io/badge/Open%20in-GitHub%20Codespaces-blue?logo=github&logoColor=white&style=for-the-badge)](https://codespaces.new/hummusonrails/arbitrum-prisoners-dilemma-workshop)
+[![Open in Codespaces](https://img.shields.io/badge/Open%20in-GitHub%20Codespaces-blue?logo=github&logoColor=white&style=for-the-badge)](https://codespaces.new/hummusonrails/arbitrum-prisoners-dilemma-workshop/tree/workshop)
 
 **Steps:**
 1. Click the button above.
