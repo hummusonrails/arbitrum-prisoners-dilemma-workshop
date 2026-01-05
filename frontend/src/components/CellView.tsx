@@ -31,11 +31,22 @@ const CellView: React.FC<CellViewProps> = ({
     p2Wants: boolean;
   } | null>(null);
 
-  if (!userAddress) return null;
-
-  const isPlayer1 = cell.player1.toLowerCase() === userAddress.toLowerCase();
-  const isPlayer2 = cell.player2.toLowerCase() === userAddress.toLowerCase();
-  const isParticipant = isPlayer1 || isPlayer2;
+const CellView: React.FC<CellViewProps> = ({
+  cell,
+  onMove,
+  onContinuationDecision,
+  onBackToLobby,
+  onRefresh,
+  moveLoading,
+  userAddress
+}) => {
+  const { publicClient } = useWeb3();
+  const [continuationStatus, setContinuationStatus] = useState<{
+    p1Decided: boolean;
+    p1Wants: boolean;
+    p2Decided: boolean;
+    p2Wants: boolean;
+  } | null>(null);
 
   // Poll continuation status when round is complete and cell is not complete
   useEffect(() => {
@@ -53,6 +64,14 @@ const CellView: React.FC<CellViewProps> = ({
 
     return () => clearInterval(interval);
   }, [publicClient, cell.id, cell.currentRound, cell.isComplete, cell.rounds]);
+
+  if (!userAddress) return null;
+
+  const isPlayer1 = cell.player1.toLowerCase() === userAddress.toLowerCase();
+  const isPlayer2 = cell.player2.toLowerCase() === userAddress.toLowerCase();
+  const isParticipant = isPlayer1 || isPlayer2;
+
+  const getMoveText = (move: number | null): string => {
 
   const getMoveText = (move: number | null): string => {
     if (move === null) return 'Pending';
