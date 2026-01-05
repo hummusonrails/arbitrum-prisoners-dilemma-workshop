@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatEther } from 'viem';
 import type { Cell, Round } from '../types/Cell';
+import { getContinuationStatus } from '../lib/contract';
+import { useWeb3 } from '../contexts/Web3Context';
 
 interface CellViewProps {
   cell: Cell;
@@ -12,20 +14,45 @@ interface CellViewProps {
   userAddress: string | undefined;
 }
 
-const CellView: React.FC<CellViewProps> = ({ 
-  cell, 
-  onMove, 
+const CellView: React.FC<CellViewProps> = ({
+  cell,
+  onMove,
   onContinuationDecision,
   onBackToLobby,
   onRefresh,
   moveLoading,
   userAddress
 }) => {
+  const { publicClient } = useWeb3();
+  const [continuationStatus, setContinuationStatus] = useState<{
+    p1Decided: boolean;
+    p1Wants: boolean;
+    p2Decided: boolean;
+    p2Wants: boolean;
+  } | null>(null);
+
   if (!userAddress) return null;
 
   const isPlayer1 = cell.player1.toLowerCase() === userAddress.toLowerCase();
   const isPlayer2 = cell.player2.toLowerCase() === userAddress.toLowerCase();
   const isParticipant = isPlayer1 || isPlayer2;
+
+  // Poll continuation status when round is complete and cell is not complete
+  useEffect(() => {
+    const fetchStatus = async () => {
+      if (!publicClient || cell.isComplete) return;
+      const currentRound = cell.rounds[cell.currentRound - 1];
+      if (currentRound && currentRound.isComplete && !cell.isComplete) {
+        const status = await getContinuationStatus(publicClient, cell.id);
+        setContinuationStatus(status);
+      }
+    };
+
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [publicClient, cell.id, cell.currentRound, cell.isComplete, cell.rounds]);
 
   const getMoveText = (move: number | null): string => {
     if (move === null) return 'Pending';
@@ -78,8 +105,16 @@ const CellView: React.FC<CellViewProps> = ({
     // Check if we've reached max rounds
     if (cell.currentRound >= cell.totalRounds) return false;
     const currentRound = getCurrentRound();
+    if (!currentRound || !currentRound.isComplete) return false;
+
+    // Check if this player has already submitted their continuation decision
+    if (continuationStatus) {
+      const hasDecided = isPlayer1 ? continuationStatus.p1Decided : continuationStatus.p2Decided;
+      if (hasDecided) return false; // Don't show dialog if already decided
+    }
+
     // Show continuation dialog if the current round is complete and cell is not complete
-    return !!currentRound && currentRound.isComplete && !cell.isComplete;
+    return true;
   };
 
   const handleMoveClick = (move: number) => {
@@ -339,7 +374,62 @@ const CellView: React.FC<CellViewProps> = ({
               </div>
             </div>
           )}
-          {!canMakeMove() && !needsContinuationDecision() && !cell.isComplete && getCurrentRound() !== null && (
+          {/* Continuation Status Display */}
+          {!needsContinuationDecision() && continuationStatus && getCurrentRound()?.isComplete && !cell.isComplete && (
+            <div className="bg-gray-800 rounded-xl p-6 mt-4 border border-gray-700">
+              <h3 className="text-lg font-bold text-white mb-4 text-center">Continuation Status</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center">
+                  <p className="text-blue-300 font-semibold mb-2">Player 1</p>
+                  {continuationStatus.p1Decided ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="px-3 py-1 bg-green-900/50 text-green-400 rounded-full text-sm border border-green-700">
+                        ✓ Decided
+                      </span>
+                      <span className={`text-sm ${continuationStatus.p1Wants ? 'text-green-400' : 'text-red-400'}`}>
+                        {continuationStatus.p1Wants ? '🔄 Wants to Continue' : '🚪 Wants to Exit'}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="px-3 py-1 bg-yellow-900/50 text-yellow-400 rounded-full text-sm border border-yellow-700">
+                      ⏳ Pending
+                    </span>
+                  )}
+                </div>
+                <div className="text-center">
+                  <p className="text-purple-300 font-semibold mb-2">Player 2</p>
+                  {continuationStatus.p2Decided ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="px-3 py-1 bg-green-900/50 text-green-400 rounded-full text-sm border border-green-700">
+                        ✓ Decided
+                      </span>
+                      <span className={`text-sm ${continuationStatus.p2Wants ? 'text-green-400' : 'text-red-400'}`}>
+                        {continuationStatus.p2Wants ? '🔄 Wants to Continue' : '🚪 Wants to Exit'}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="px-3 py-1 bg-yellow-900/50 text-yellow-400 rounded-full text-sm border border-yellow-700">
+                      ⏳ Pending
+                    </span>
+                  )}
+                </div>
+              </div>
+              {continuationStatus.p1Decided && continuationStatus.p2Decided && (
+                <div className="mt-4 text-center">
+                  {continuationStatus.p1Wants && continuationStatus.p2Wants ? (
+                    <p className="text-green-400 font-semibold">
+                      ✓ Both players want to continue - Next round starting...
+                    </p>
+                  ) : (
+                    <p className="text-red-400 font-semibold">
+                      ✗ At least one player wants to exit - Cell will complete...
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          {!canMakeMove() && !needsContinuationDecision() && !cell.isComplete && getCurrentRound() !== null && !continuationStatus && (
             <div className="text-center text-gray-400 py-8">
               <p>Waiting for other player or round completion...</p>
             </div>

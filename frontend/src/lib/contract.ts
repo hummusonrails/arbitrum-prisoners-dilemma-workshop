@@ -211,3 +211,34 @@ export const startContractInitializationPolling = (
   // Return a function to stop polling
   return () => { polling = false; };
 };
+
+// Get continuation status for a cell
+// Returns (player1_decided, player1_wants, player2_decided, player2_wants)
+export const getContinuationStatus = async (
+  publicClient: PublicClient | null,
+  cellId: string
+): Promise<{ p1Decided: boolean; p1Wants: boolean; p2Decided: boolean; p2Wants: boolean } | null> => {
+  if (!publicClient) return null;
+  try {
+    const latestBlock = await publicClient.getBlockNumber();
+    const result = await publicClient.readContract({
+      address: CONTRACT_ADDRESS,
+      abi,
+      functionName: 'getContinuationStatus',
+      args: [BigInt(cellId)],
+      blockNumber: latestBlock,
+    });
+
+    const [p1Decided, p1Wants, p2Decided, p2Wants] = result as [boolean, boolean, boolean, boolean];
+
+    return {
+      p1Decided,
+      p1Wants,
+      p2Decided,
+      p2Wants,
+    };
+  } catch (error) {
+    console.error('[contract] Error fetching continuation status:', error);
+    return null;
+  }
+};
