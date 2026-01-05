@@ -82,19 +82,18 @@ export function useCellActions({
           confirmations: 1,
           timeout: 60000,
         });
-                
+
         if (receipt.status === 'reverted') {
           throw new Error('Transaction reverted');
         }
-      }
-      
-      setTimeout(async () => {
+
+        // Update state after transaction is confirmed
         try {
           await updateCellsState();
         } catch (refreshError) {
           console.error('Error refreshing cells after create:', refreshError);
         }
-      }, 2000);
+      }
       
       return hash;
     } catch (error) {
@@ -109,7 +108,7 @@ export function useCellActions({
 
   // Join existing cell
   const handleJoinCell = useCallback(async (cellId: string, stake: string) => {
-    if (!walletClient || !address) return;
+    if (!walletClient || !address || !publicClient) return;
     try {
       setLoading(true);
       setError(null);
@@ -122,19 +121,29 @@ export function useCellActions({
         value: parseEther(stake),
         chain: localhost,
       });
-      setTimeout(async () => {
-        await updateCellsState();
-      }, 1500);
+
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash,
+        confirmations: 1,
+        timeout: 60000,
+      });
+
+      if (receipt.status === 'reverted') {
+        throw new Error('Transaction reverted');
+      }
+
+      // Update state after transaction is confirmed
+      await updateCellsState();
     } catch (error) {
       setError('Failed to join cell: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setLoading(false);
     }
-  }, [walletClient, address, setLoading, setError, updateCellsState]);
+  }, [walletClient, address, publicClient, setLoading, setError, updateCellsState]);
 
   // Submit move for current round
   const handleMove = useCallback(async (cellId: string, move: number) => {
-    if (!walletClient || !address) return;
+    if (!walletClient || !address || !publicClient) return;
     try {
       setMoveLoading(true);
       setError(null);
@@ -146,19 +155,29 @@ export function useCellActions({
         account: address as `0x${string}`,
         chain: localhost,
       });
-      setTimeout(async () => {
-        await updateCellsState();
-      }, 1500);
+
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash,
+        confirmations: 1,
+        timeout: 60000,
+      });
+
+      if (receipt.status === 'reverted') {
+        throw new Error('Transaction reverted');
+      }
+
+      // Update state after transaction is confirmed
+      await updateCellsState();
     } catch (error) {
       setError('Failed to submit move: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setMoveLoading(false);
     }
-  }, [walletClient, address, setMoveLoading, setError, updateCellsState]);
+  }, [walletClient, address, publicClient, setMoveLoading, setError, updateCellsState]);
 
   // Submit continuation decision
   const handleContinuationDecision = useCallback(async (cellId: string, wantsToContinue: boolean) => {
-    if (!walletClient || !address) return;
+    if (!walletClient || !address || !publicClient) return;
     try {
       setLoading(true);
       setError(null);
@@ -170,15 +189,25 @@ export function useCellActions({
         account: address as `0x${string}`,
         chain: localhost,
       });
-      setTimeout(async () => {
-        await updateCellsState();
-      }, 1500);
+
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash,
+        confirmations: 1,
+        timeout: 60000,
+      });
+
+      if (receipt.status === 'reverted') {
+        throw new Error('Transaction reverted');
+      }
+
+      // Update state after transaction is confirmed
+      await updateCellsState();
     } catch (error) {
       setError('Failed to submit continuation decision: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setLoading(false);
     }
-  }, [walletClient, address, setLoading, setError, updateCellsState]);
+  }, [walletClient, address, publicClient, setLoading, setError, updateCellsState]);
 
   // Navigation handlers
   const handleEnterCell = useCallback((cellId: string) => {

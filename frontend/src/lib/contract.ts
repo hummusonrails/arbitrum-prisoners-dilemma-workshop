@@ -136,21 +136,22 @@ export const fetchCellData = async (
           let parsedP1Payout = BigInt(0);
           let parsedP2Payout = BigInt(0);
 
-          if (p1Move === 0 && p2Move === 0 && p1Payout === BigInt(0) && p2Payout === BigInt(0)) {
-            // No moves submitted yet, round is not finished
+          // Check if round is finished based on payouts
+          // Don't rely on moves being zero since Cooperate = 0 is a valid move
+          if (p1Payout === BigInt(0) && p2Payout === BigInt(0)) {
+            // No payouts yet, round is not finished
             parsedP1Move = null;
             parsedP2Move = null;
             parsedP1Payout = BigInt(0);
             parsedP2Payout = BigInt(0);
             isFinished = false;
           } else {
-            // If not all zero, treat -1 as null, 0/1 as valid moves
-            parsedP1Move = p1Move === -1 ? null : p1Move;
-            parsedP2Move = p2Move === -1 ? null : p2Move;
+            // Payouts exist, round is finished
+            parsedP1Move = p1Move;
+            parsedP2Move = p2Move;
             parsedP1Payout = BigInt(p1Payout);
             parsedP2Payout = BigInt(p2Payout);
-            // Mark as finished if payouts are nonzero
-            isFinished = (parsedP1Payout !== BigInt(0) || parsedP2Payout !== BigInt(0));
+            isFinished = true;
           }
 
           // Always add a round for every round number up to currentRound
@@ -189,6 +190,39 @@ export const fetchCellData = async (
     }
     return null;
   } catch (error) {
+    return null;
+  }
+};
+
+// Get continuation status for a cell
+export const getContinuationStatus = async (
+  publicClient: PublicClient | null,
+  cellId: string
+): Promise<{
+  player1Decided: boolean;
+  player1Wants: boolean;
+  player2Decided: boolean;
+  player2Wants: boolean;
+} | null> => {
+  if (!publicClient) return null;
+  try {
+    const latestBlock = await publicClient.getBlockNumber();
+    const result = await publicClient.readContract({
+      address: CONTRACT_ADDRESS,
+      abi,
+      functionName: 'getContinuationStatus',
+      args: [BigInt(cellId)],
+      blockNumber: latestBlock,
+    });
+    const [player1Decided, player1Wants, player2Decided, player2Wants] = result as [boolean, boolean, boolean, boolean];
+    return {
+      player1Decided,
+      player1Wants,
+      player2Decided,
+      player2Wants,
+    };
+  } catch (error) {
+    console.error('[contract] Error fetching continuation status:', error);
     return null;
   }
 };

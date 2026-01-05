@@ -316,24 +316,14 @@ impl PrisonersDilemma {
             if p1_wants && p2_wants && cell.current_round < cell.total_rounds {
                 // Both want to continue - create next round
                 cell.current_round += 1;
-                // Always push a new round if advancing
-                if cell.rounds.len() < cell.current_round as usize {
-                    cell.rounds.push(Round {
-                        player1_move: None,
-                        player2_move: None,
-                        player1_payout: U256::ZERO,
-                        player2_payout: U256::ZERO,
-                        is_finished: false,
-                    });
-                } else if cell.rounds.len() == cell.current_round as usize {
-                    cell.rounds.push(Round {
-                        player1_move: None,
-                        player2_move: None,
-                        player1_payout: U256::ZERO,
-                        player2_payout: U256::ZERO,
-                        is_finished: false,
-                    });
-                }
+                // After incrementing, rounds.len() will always be < current_round
+                cell.rounds.push(Round {
+                    player1_move: None,
+                    player2_move: None,
+                    player1_payout: U256::ZERO,
+                    player2_payout: U256::ZERO,
+                    is_finished: false,
+                });
                 cell.continuation_flags = 0; // Reset all flags
             } else {
                 // At least one doesn't want to continue or max rounds reached - end cell

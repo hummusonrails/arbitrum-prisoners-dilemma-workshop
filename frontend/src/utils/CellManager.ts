@@ -1,8 +1,9 @@
 import type { Cell, Round, CellManager } from '../types/Cell';
 
-// Shared utility for generating a random number of rounds between 1 and 10
+// Shared utility for generating a random number of rounds between 2 and 5
+// This range matches the documented game design for strategic uncertainty
 export function generateRandomRounds(): number {
-  return Math.floor(Math.random() * 10) + 1;
+  return Math.floor(Math.random() * 4) + 2; // 2-5 rounds
 }
 
 export class CellManagerImpl implements CellManager {
