@@ -105,7 +105,8 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
       console.log('[Web3Provider] Accounts changed:', accounts);
       if (accounts.length === 0) {
         disconnect();
-      } else if (accounts[0] !== address && !isConnected) {
+      } else if (accounts[0] !== address) {
+        // Account has changed - reconnect with new account
         connect();
       }
     };

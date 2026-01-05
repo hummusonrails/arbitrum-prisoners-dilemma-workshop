@@ -296,24 +296,13 @@ impl PrisonersDilemma {
             if p1_wants && p2_wants && cell.current_round < cell.total_rounds {
                 // Both want to continue - create next round
                 cell.current_round += 1;
-                // Always push a new round if advancing
-                if cell.rounds.len() < cell.current_round as usize {
-                    cell.rounds.push(Round {
-                        player1_move: None,
-                        player2_move: None,
-                        player1_payout: U256::ZERO,
-                        player2_payout: U256::ZERO,
-                        is_finished: false,
-                    });
-                } else if cell.rounds.len() == cell.current_round as usize {
-                    cell.rounds.push(Round {
-                        player1_move: None,
-                        player2_move: None,
-                        player1_payout: U256::ZERO,
-                        player2_payout: U256::ZERO,
-                        is_finished: false,
-                    });
-                }
+                cell.rounds.push(Round {
+                    player1_move: None,
+                    player2_move: None,
+                    player1_payout: U256::ZERO,
+                    player2_payout: U256::ZERO,
+                    is_finished: false,
+                });
                 cell.continuation_flags = 0; // Reset all flags
             } else {
                 // At least one doesn't want to continue or max rounds reached - end cell
@@ -483,12 +472,26 @@ impl PrisonersDilemma {
         data.push(cell.rounds.len() as u8);
         
         // Serialize rounds
+        // Encoding: bits 0-1 = P1 move (0=None, 1=Cooperate, 2=Defect)
+        //           bits 2-3 = P2 move (0=None, 1=Cooperate, 2=Defect)
+        //           bit 4 = is_finished
         for round in &cell.rounds {
             let mut round_byte = 0u8;
-            if let Some(Move::Cooperate) = round.player1_move { round_byte |= 0x01; }
-            if let Some(Move::Defect) = round.player1_move { round_byte |= 0x02; }
-            if let Some(Move::Cooperate) = round.player2_move { round_byte |= 0x04; }
-            if let Some(Move::Defect) = round.player2_move { round_byte |= 0x08; }
+
+            // Encode player 1 move in bits 0-1
+            match round.player1_move {
+                Some(Move::Cooperate) => round_byte |= 0x01,
+                Some(Move::Defect) => round_byte |= 0x02,
+                None => {}, // 0x00 already (no bits set)
+            }
+
+            // Encode player 2 move in bits 2-3
+            match round.player2_move {
+                Some(Move::Cooperate) => round_byte |= 0x04,
+                Some(Move::Defect) => round_byte |= 0x08,
+                None => {}, // 0x00 already (no bits set)
+            }
+
             if round.is_finished { round_byte |= 0x10; }
             data.push(round_byte);
             
@@ -533,17 +536,19 @@ impl PrisonersDilemma {
             
             let round_byte = data[pos];
             pos += 1;
-            
+
+            // Decode player 1 move from bits 0-1 (0=None, 1=Cooperate, 2=Defect)
             let player1_move = match round_byte & 0x03 {
                 0x01 => Some(Move::Cooperate),
                 0x02 => Some(Move::Defect),
-                _ => None,
+                _ => None, // 0x00 or invalid (0x03)
             };
-            
+
+            // Decode player 2 move from bits 2-3 (0=None, 1=Cooperate, 2=Defect)
             let player2_move = match round_byte & 0x0C {
                 0x04 => Some(Move::Cooperate),
                 0x08 => Some(Move::Defect),
-                _ => None,
+                _ => None, // 0x00 or invalid (0x0C)
             };
             
             let is_finished = (round_byte & 0x10) != 0;
