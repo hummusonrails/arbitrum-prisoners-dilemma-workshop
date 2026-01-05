@@ -136,21 +136,22 @@ export const fetchCellData = async (
           let parsedP1Payout = BigInt(0);
           let parsedP2Payout = BigInt(0);
 
-          if (p1Move === 0 && p2Move === 0 && p1Payout === BigInt(0) && p2Payout === BigInt(0)) {
-            // No moves submitted yet, round is not finished
+          // A round is finished if payouts are non-zero (contract only sets payouts after resolution)
+          // This properly handles the case where both players cooperate (move 0,0) with non-zero payouts
+          isFinished = (p1Payout !== BigInt(0) || p2Payout !== BigInt(0));
+
+          if (isFinished) {
+            // Round is complete - moves are valid (0 = Cooperate, 1 = Defect)
+            parsedP1Move = p1Move;
+            parsedP2Move = p2Move;
+            parsedP1Payout = BigInt(p1Payout);
+            parsedP2Payout = BigInt(p2Payout);
+          } else {
+            // Round not started or moves not yet submitted by both players
             parsedP1Move = null;
             parsedP2Move = null;
             parsedP1Payout = BigInt(0);
             parsedP2Payout = BigInt(0);
-            isFinished = false;
-          } else {
-            // If not all zero, treat -1 as null, 0/1 as valid moves
-            parsedP1Move = p1Move === -1 ? null : p1Move;
-            parsedP2Move = p2Move === -1 ? null : p2Move;
-            parsedP1Payout = BigInt(p1Payout);
-            parsedP2Payout = BigInt(p2Payout);
-            // Mark as finished if payouts are nonzero
-            isFinished = (parsedP1Payout !== BigInt(0) || parsedP2Payout !== BigInt(0));
           }
 
           // Always add a round for every round number up to currentRound
