@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { parseEther } from 'viem';
+import { parseEther, BaseError, ContractFunctionRevertedError } from 'viem';
 import { generateRandomRounds } from '../utils/CellManager';
 import type { WalletClient, PublicClient } from 'viem';
 import { CONTRACT_ADDRESS, abi, defaultChain } from '../lib/contract';
@@ -164,9 +164,45 @@ export function useCellActions({
         });
       } catch (simError: any) {
         console.error('[useCellActions] Simulation failed:', simError);
-        // Extract readable error message
+
+        // Extract readable error message from contract revert
         let errorMessage = 'Transaction would fail';
-        if (simError.message) {
+
+        // Check if it's a contract revert error with proper error decoding
+        if (simError instanceof BaseError) {
+          const revertError = simError.walk(err => err instanceof ContractFunctionRevertedError);
+          if (revertError instanceof ContractFunctionRevertedError) {
+            const errorName = revertError.data?.errorName;
+            console.log('[useCellActions] Contract error name:', errorName);
+
+            // Map contract errors to user-friendly messages
+            switch (errorName) {
+              case 'CellIsComplete':
+                errorMessage = 'This game has already been completed';
+                break;
+              case 'NeedPlayer2':
+                errorMessage = 'Waiting for second player to join';
+                break;
+              case 'NotInCell':
+                errorMessage = 'You are not a player in this game';
+                break;
+              case 'NoRoundStarted':
+                errorMessage = 'No round has been started yet';
+                break;
+              case 'RoundNotReady':
+                errorMessage = 'Round is not ready for moves';
+                break;
+              case 'RoundAlreadyFinished':
+                errorMessage = 'You have already submitted your move for this round';
+                break;
+              default:
+                errorMessage = revertError.shortMessage || simError.message;
+            }
+          } else {
+            errorMessage = simError.shortMessage || simError.message;
+          }
+        } else if (simError.message) {
+          // Fallback to string matching for older error formats
           if (simError.message.includes('CellIsComplete')) {
             errorMessage = 'This game has already been completed';
           } else if (simError.message.includes('NeedPlayer2')) {

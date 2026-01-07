@@ -1,4 +1,5 @@
-[
+// Generate JSON ABI from Solidity interface
+const abi = [
     {
         "inputs": [
             {
@@ -411,4 +412,11 @@
         "name": "InvalidCellData",
         "type": "error"
     }
-]
+];
+
+const fs = require('fs');
+const path = require('path');
+
+const outputPath = path.join(__dirname, '../../frontend/src/abi/PrisonersDilemmaContract.json');
+fs.writeFileSync(outputPath, JSON.stringify(abi, null, 4));
+console.log('ABI exported to:', outputPath);
