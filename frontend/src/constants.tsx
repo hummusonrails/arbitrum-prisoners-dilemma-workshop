@@ -1,5 +1,6 @@
 // Define custom Stylus chain
 import { defineChain } from 'viem'
+import { arbitrumSepolia } from 'viem/chains'
 
 export const localhost = defineChain({
   id: 412346,
@@ -22,3 +23,9 @@ export const localhost = defineChain({
   },
   testnet: false,
 })
+
+// Export Arbitrum Sepolia for production use
+export { arbitrumSepolia }
+
+// Determine which chain to use based on environment
+export const defaultChain = import.meta.env.VITE_USE_SEPOLIA === 'true' ? arbitrumSepolia : localhost

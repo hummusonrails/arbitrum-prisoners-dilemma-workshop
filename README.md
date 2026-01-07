@@ -51,9 +51,30 @@ The Founder's Dilemma is a classic game theory scenario adapted for business str
 
 **The Founder's Dilemma**: While mutual partnership yields the best collective outcome, individual incentives push toward competition—especially as the relationship nears its end. This mirrors real-world challenges in business alliances, pricing strategy, and strategic partnerships.
 
-## Quick Start (GitHub Codespaces)
+## 🚀 Quick Start (Hosted Version - For Non-Technical Founders)
 
-Run the workshop in a preconfigured Codespace — no setup required!
+Want to experience the Founder's Dilemma without any setup? Try the hosted version!
+
+**Requirements:**
+- MetaMask or another Web3 wallet
+- Arbitrum Sepolia testnet ETH (free from faucets)
+
+**Get Started:**
+1. Get Arbitrum Sepolia testnet ETH:
+   - Bridge Sepolia ETH to Arbitrum Sepolia: [bridge.arbitrum.io](https://bridge.arbitrum.io/?destinationChain=arbitrum-sepolia&sourceChain=sepolia)
+   - Get Sepolia ETH first from: [sepoliafaucet.com](https://www.sepoliafaucet.com/) or [faucets.chain.link/sepolia](https://faucets.chain.link/sepolia)
+2. Visit the hosted application (URL will be provided after deployment)
+3. Connect your wallet
+4. Start making strategic business decisions!
+
+**Network Details:**
+- Network: Arbitrum Sepolia
+- Chain ID: 421614
+- RPC: https://sepolia-rollup.arbitrum.io/rpc
+
+## Quick Start (GitHub Codespaces - For Developers)
+
+Run the full workshop in a preconfigured Codespace — complete development environment!
 
 [![Open in Codespaces](https://img.shields.io/badge/Open%20in-GitHub%20Codespaces-blue?logo=github&logoColor=white&style=for-the-badge)](https://codespaces.new/hummusonrails/arbitrum-prisoners-dilemma-workshop)
 
@@ -335,5 +356,66 @@ Daniel Kahneman's research on behavioral economics reveals critical patterns in 
 - What role does strategic uncertainty play in maintaining cooperation?
 - How would adding reputation scores change behavior?
 - What parallels do you see with your own founder challenges?
+
+## 🌐 Deploying Your Own Hosted Version
+
+Want to deploy your own version on Arbitrum Sepolia with Vercel? Follow these steps:
+
+### 1. Deploy Contract to Arbitrum Sepolia
+
+First, ensure you have Sepolia ETH in your deployer wallet, then:
+
+```bash
+cd contracts/prisoners-dilemma
+DEPLOY_PRIVATE_KEY=your_private_key_here pnpm deploy:sepolia
+```
+
+Copy the deployed contract address from the output.
+
+### 2. Configure Frontend for Sepolia
+
+Create a `.env` file in the `frontend/` directory:
+
+```bash
+# frontend/.env
+VITE_USE_SEPOLIA=true
+VITE_CONTRACT_ADDRESS=your_deployed_contract_address_here
+```
+
+### 3. Deploy to Vercel
+
+The frontend is pre-configured for Vercel deployment with `vercel.json`.
+
+**Option A: Using Vercel CLI**
+```bash
+cd frontend
+npm install -g vercel
+vercel
+```
+
+**Option B: Using Vercel Dashboard**
+1. Push your code to GitHub
+2. Go to [vercel.com](https://vercel.com)
+3. Import your repository
+4. Add environment variables:
+   - `VITE_USE_SEPOLIA=true`
+   - `VITE_CONTRACT_ADDRESS=your_contract_address`
+5. Deploy!
+
+### 4. Initialize the Contract
+
+After deployment, visit your hosted application and:
+1. Connect your wallet (the deployer wallet)
+2. Click "Initialize Contract"
+3. Set the minimum stake (e.g., 0.01 ETH)
+4. Confirm the transaction
+
+Your Founder's Dilemma game is now live on Arbitrum Sepolia!
+
+### Network Configuration
+
+The application automatically switches between:
+- **Local Development**: `VITE_USE_SEPOLIA=false` (or unset) - uses localhost:8547
+- **Production/Sepolia**: `VITE_USE_SEPOLIA=true` - uses Arbitrum Sepolia testnet
 
 Happy strategizing! 🎯

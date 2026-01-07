@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext } from 'react';
 import type { ReactNode } from 'react';
-import { createPublicClient, createWalletClient, custom } from 'viem';
-import { localhost } from '../constants';
+import { createPublicClient, createWalletClient, custom, http } from 'viem';
+import { localhost, defaultChain } from '../constants';
 
 
 interface Web3ContextType {
@@ -41,10 +41,10 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
     }
     try {
       const ethereum = (window as any).ethereum;
-      const targetChainIdHex = `0x${localhost.id.toString(16)}`;
+      const targetChainIdHex = `0x${defaultChain.id.toString(16)}`;
 
-      // Ensure the wallet is on Nitro Localhost before creating clients
-      const ensureLocalhostChain = async () => {
+      // Ensure the wallet is on the correct chain before creating clients
+      const ensureCorrectChain = async () => {
         const currentChainIdHex = await ethereum.request({ method: 'eth_chainId' });
         if (currentChainIdHex === targetChainIdHex) return;
         try {
@@ -58,9 +58,9 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
               method: 'wallet_addEthereumChain',
               params: [{
                 chainId: targetChainIdHex,
-                chainName: localhost.name,
-                nativeCurrency: localhost.nativeCurrency,
-                rpcUrls: localhost.rpcUrls.default.http,
+                chainName: defaultChain.name,
+                nativeCurrency: defaultChain.nativeCurrency,
+                rpcUrls: defaultChain.rpcUrls.default.http,
               }],
             });
           } else {
@@ -70,17 +70,17 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
       };
 
       const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
-      await ensureLocalhostChain();
+      await ensureCorrectChain();
       const chainIdHex = await ethereum.request({ method: 'eth_chainId' });
       const chainId = Number(chainIdHex);
       const newAddress = accounts[0];
       const walletClient = createWalletClient({
-        chain: localhost,
+        chain: defaultChain,
         transport: custom((window as any).ethereum),
         account: newAddress as `0x${string}`
       });
       const publicClient = createPublicClient({
-        chain: localhost,
+        chain: defaultChain,
         transport: custom((window as any).ethereum),
       });
       setWalletClient(walletClient);

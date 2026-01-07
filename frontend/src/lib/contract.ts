@@ -2,10 +2,10 @@ import type { Cell } from '../types/Cell';
 import type { PublicClient, WalletClient } from 'viem';
 import abi from '../abi/PrisonersDilemmaContract.json';
 import { parseEther } from 'viem';
-import { localhost } from '../constants';
+import { localhost, defaultChain } from '../constants';
 
 export const CONTRACT_ADDRESS = (import.meta.env.VITE_CONTRACT_ADDRESS || '0x47cec0749bd110bc11f9577a70061202b1b6c034') as `0x${string}`;
-export { abi, localhost };
+export { abi, localhost, defaultChain };
 
 // Initialize contract
 export const initializeContract = async (
@@ -23,7 +23,7 @@ export const initializeContract = async (
       abi,
       functionName: 'initialize',
       args: [parseEther('0.01')],
-      chain: localhost,
+      chain: defaultChain,
       account: address as `0x${string}`,
     });
   } catch (error) {
