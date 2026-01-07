@@ -17,7 +17,7 @@
     "react-dom": "^18.3.1",
     "tailwindcss": "^4.1.11",
     "viem": "^2.33.0",
-    "wagmi": "^2.16.0"
+    "wagmi": "^3.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",
