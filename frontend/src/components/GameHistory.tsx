@@ -19,12 +19,12 @@ const GameHistory: React.FC<GameHistoryProps> = ({
 
   const getMoveText = (move: number | null): string => {
     if (move === null) return 'N/A';
-    return move === 0 ? 'Cooperate' : 'Defect';
+    return move === 0 ? 'Partner' : 'Compete';
   };
 
   const getMoveIcon = (move: number | null): string => {
     if (move === null) return '❓';
-    return move === 0 ? '🤝' : '🗡️';
+    return move === 0 ? '🤝' : '⚔️';
   };
 
   const getTotalPayout = (cell: Cell, playerAddress: string): bigint => {
@@ -53,8 +53,8 @@ const GameHistory: React.FC<GameHistoryProps> = ({
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-4xl font-bold text-white mb-2">Cell History</h1>
-          <p className="text-gray-300">View completed multi-round Prisoner's Dilemma cells</p>
+          <h1 className="text-4xl font-bold text-white mb-2">Deal History</h1>
+          <p className="text-gray-300">View completed strategic business deals and outcomes</p>
         </div>
         <button
           onClick={onBackToLobby}
@@ -68,8 +68,8 @@ const GameHistory: React.FC<GameHistoryProps> = ({
       {/* History List */}
       {cellHistory.length === 0 ? (
         <div className="bg-gray-800 rounded-2xl p-8 text-center border border-gray-700">
-          <p className="text-gray-400 text-lg">No completed cells yet.</p>
-          <p className="text-gray-500 text-sm mt-2">Complete some games to see them here!</p>
+          <p className="text-gray-400 text-lg">No completed deals yet.</p>
+          <p className="text-gray-500 text-sm mt-2">Complete some strategic deals to see them here!</p>
         </div>
       ) : (
         <div className="space-y-6">
@@ -81,10 +81,10 @@ const GameHistory: React.FC<GameHistoryProps> = ({
               }`}
               onClick={() => onEnterCell(cell.id)}
             >
-              {/* Cell Header */}
+              {/* Deal Header */}
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-white mb-2">Cell #{cell.id}</h2>
+                  <h2 className="text-2xl font-bold text-white mb-2">Deal #{cell.id}</h2>
                   <div className="flex items-center gap-4 text-sm text-gray-300">
                     <span>Stake: {formatEther(cell.stake)} ETH</span>
                     <span>Rounds: {cell.rounds.length}/{cell.totalRounds}</span>

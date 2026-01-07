@@ -131,12 +131,8 @@ const CellView: React.FC<CellViewProps> = ({
         <div className="absolute inset-0 bg-gradient-to-r from-teal-900/40 to-cyan-900/40 rounded-t-3xl border-t-4 border-l-4 border-r-4 border-teal-500/50 shadow-2xl" />
         <div className="absolute inset-1 bg-black/70 rounded-t-2xl border-t-2 border-l-2 border-r-2 border-teal-400/30" />
 
-        <div className="absolute inset-0 opacity-30">
-          <div className="h-full flex justify-center items-center">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="w-1 h-full bg-gradient-to-b from-teal-400 to-cyan-700 mx-4 shadow-xl" />
-            ))}
-          </div>
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute inset-0 bg-gradient-to-r from-teal-500/30 via-cyan-500/30 to-blue-500/30 blur-2xl"></div>
         </div>
 
         <div className="absolute top-2 left-2 w-3 h-3 bg-teal-500 rounded-full animate-ping" />
