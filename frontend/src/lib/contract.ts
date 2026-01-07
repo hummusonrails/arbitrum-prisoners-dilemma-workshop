@@ -4,7 +4,7 @@ import abi from '../abi/PrisonersDilemmaContract.json';
 import { parseEther } from 'viem';
 import { localhost, defaultChain } from '../constants';
 
-export const CONTRACT_ADDRESS = (import.meta.env.VITE_CONTRACT_ADDRESS || '0x47cec0749bd110bc11f9577a70061202b1b6c034') as `0x${string}`;
+export const CONTRACT_ADDRESS = (import.meta.env.VITE_CONTRACT_ADDRESS || '0xc0f0a8896aec7d5b6d4989e8417917a8b72224f6') as `0x${string}`;
 export { abi, localhost, defaultChain };
 
 type AnyPublicClient = PublicClient<any, any, any>;
