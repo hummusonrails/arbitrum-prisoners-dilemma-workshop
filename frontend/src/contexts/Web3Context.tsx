@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext } from 'react';
 import type { ReactNode } from 'react';
 import { createPublicClient, createWalletClient, custom } from 'viem';
 import { defaultChain } from '../constants';
+import { CONTRACT_ADDRESS } from '../lib/contract';
 
 
 interface Web3ContextType {
@@ -33,6 +34,15 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
   const [chainId, setChainId] = useState<number | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    console.log('[Web3Provider] Build config', {
+      contractAddress: CONTRACT_ADDRESS,
+      chainId: defaultChain.id,
+      chainName: defaultChain.name,
+      useSepolia: import.meta.env.VITE_USE_SEPOLIA,
+    });
+  }, []);
 
   const connect = async () => {
     if (!(window as any).ethereum) {
