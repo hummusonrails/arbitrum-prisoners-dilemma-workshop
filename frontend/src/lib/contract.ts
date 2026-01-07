@@ -4,7 +4,7 @@ import abi from '../abi/PrisonersDilemmaContract.json';
 import { parseEther } from 'viem';
 import { localhost } from '../constants';
 
-export const CONTRACT_ADDRESS = '0x79b994d378518eae46917aa19f05ce6545faac26' as const;
+export const CONTRACT_ADDRESS = '0x4a2ba922052ba54e29c5417bc979daaf7d5fe4f4' as const;
 export { abi, localhost };
 
 // Initialize contract
