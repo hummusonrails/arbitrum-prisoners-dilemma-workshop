@@ -84,6 +84,30 @@ const abi = [
                 "type": "uint256"
             }
         ],
+        "name": "getCurrentRoundStatus",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            },
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "cell_id",
+                "type": "uint256"
+            }
+        ],
         "name": "getContinuationStatus",
         "outputs": [
             {

@@ -245,3 +245,32 @@ export const getContinuationStatus = async (
     return null;
   }
 };
+
+// Get current round move submission status
+// Returns (player1_submitted, player2_submitted)
+export const getCurrentRoundStatus = async (
+  publicClient: AnyPublicClient | null,
+  cellId: string
+): Promise<{ p1Submitted: boolean; p2Submitted: boolean } | null> => {
+  if (!publicClient) return null;
+  try {
+    const latestBlock = await publicClient.getBlockNumber();
+    const result = await publicClient.readContract({
+      address: CONTRACT_ADDRESS,
+      abi,
+      functionName: 'getCurrentRoundStatus',
+      args: [BigInt(cellId)],
+      blockNumber: latestBlock,
+    });
+
+    const [p1Submitted, p2Submitted] = result as [boolean, boolean];
+
+    return {
+      p1Submitted,
+      p2Submitted,
+    };
+  } catch (error) {
+    console.error('[contract] Error fetching current round status:', error);
+    return null;
+  }
+};

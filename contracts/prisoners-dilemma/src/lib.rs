@@ -352,6 +352,25 @@ impl PrisonersDilemma {
         self.cell_counter.get()
     }
 
+    // Get current round move submission status
+    // Returns (player1_submitted, player2_submitted) for the current round
+    pub fn get_current_round_status(&self, cell_id: U256) -> (bool, bool) {
+        let cell = self.load_cell(cell_id);
+
+        // If no round started yet
+        if cell.current_round == 0 || cell.rounds.is_empty() {
+            return (false, false);
+        }
+
+        let round_idx = (cell.current_round - 1) as usize;
+        if round_idx >= cell.rounds.len() {
+            return (false, false);
+        }
+
+        let round = &cell.rounds[round_idx];
+        (round.player1_move.is_some(), round.player2_move.is_some())
+    }
+
     pub fn get_round_result(&self, cell_id: U256, round_number: u8) -> (u8, u8, U256, U256) {
         let cell = self.load_cell(cell_id);
         let round_idx = (round_number - 1) as usize;

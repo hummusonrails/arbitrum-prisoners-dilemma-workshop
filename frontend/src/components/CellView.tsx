@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatEther } from 'viem';
 import type { Cell, Round } from '../types/Cell';
-import { getContinuationStatus } from '../lib/contract';
+import { getContinuationStatus, getCurrentRoundStatus } from '../lib/contract';
 import { useWeb3 } from '../contexts/Web3Context';
 
 interface CellViewProps {
@@ -30,11 +30,22 @@ const CellView: React.FC<CellViewProps> = ({
     p2Decided: boolean;
     p2Wants: boolean;
   } | null>(null);
+  const [currentRoundStatus, setCurrentRoundStatus] = useState<{
+    p1Submitted: boolean;
+    p2Submitted: boolean;
+  } | null>(null);
 
-  // Poll continuation status when round is complete and cell is not complete
+  // Poll continuation status and current round status
   useEffect(() => {
     const fetchStatus = async () => {
       if (!publicClient || cell.isComplete) return;
+
+      // Fetch current round submission status
+      const roundStatus = await getCurrentRoundStatus(publicClient, cell.id);
+      setCurrentRoundStatus(roundStatus);
+      console.log('[CellView] Current round status:', roundStatus);
+
+      // Fetch continuation status when round is complete
       const currentRound = cell.rounds[cell.currentRound - 1];
       if (currentRound && currentRound.isComplete && !cell.isComplete) {
         const status = await getContinuationStatus(publicClient, cell.id);
@@ -95,7 +106,17 @@ const CellView: React.FC<CellViewProps> = ({
     if (!currentRound || currentRound.isComplete) return false;
     // If we need continuation decisions, can't make moves yet
     if (needsContinuationDecision()) return false;
-    // Check if this player has already made their move in the current round
+
+    // Check contract state to see if this player has already submitted their move
+    if (currentRoundStatus) {
+      const hasSubmitted = isPlayer1 ? currentRoundStatus.p1Submitted : currentRoundStatus.p2Submitted;
+      if (hasSubmitted) {
+        console.log('[CellView] Player has already submitted move according to contract');
+        return false;
+      }
+    }
+
+    // Fallback: Check if this player has already made their move based on local state
     const playerMove = isPlayer1 ? currentRound.player1Move : currentRound.player2Move;
     return playerMove === null;
   };
@@ -318,6 +339,40 @@ const CellView: React.FC<CellViewProps> = ({
       {!cell.isComplete && (
         <div className="bg-gray-900 p-6 border-b border-gray-700">
           <h2 className="text-xl font-bold text-white mb-4">Current Round</h2>
+
+          {/* Show move submission status */}
+          {currentRoundStatus && !getCurrentRound()?.isComplete && (
+            <div className="bg-gray-800 rounded-xl p-4 mb-4 border border-gray-700">
+              <h3 className="text-sm font-bold text-gray-300 mb-3 text-center">Move Submission Status</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center">
+                  <p className="text-blue-300 font-semibold mb-2 text-sm">Player 1</p>
+                  {currentRoundStatus.p1Submitted ? (
+                    <span className="px-3 py-1 bg-green-900/50 text-green-400 rounded-full text-xs border border-green-700">
+                      ✓ Move Submitted
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 bg-yellow-900/50 text-yellow-400 rounded-full text-xs border border-yellow-700">
+                      ⏳ Waiting
+                    </span>
+                  )}
+                </div>
+                <div className="text-center">
+                  <p className="text-purple-300 font-semibold mb-2 text-sm">Player 2</p>
+                  {currentRoundStatus.p2Submitted ? (
+                    <span className="px-3 py-1 bg-green-900/50 text-green-400 rounded-full text-xs border border-green-700">
+                      ✓ Move Submitted
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 bg-yellow-900/50 text-yellow-400 rounded-full text-xs border border-yellow-700">
+                      ⏳ Waiting
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {getCurrentRound() === null ? (
             <div className="text-center py-8">
               <div className="inline-flex items-center gap-3 bg-black/50 px-6 py-3 rounded-xl border border-teal-500/30">
