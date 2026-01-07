@@ -56,26 +56,26 @@ const CellView: React.FC<CellViewProps> = ({
 
   const getMoveText = (move: number | null): string => {
     if (move === null) return 'Pending';
-    return move === 0 ? 'Cooperate' : 'Defect';
+    return move === 0 ? 'Partner' : 'Compete';
   };
 
   const getMoveIcon = (move: number | null): string => {
     if (move === null) return '⏳';
-    return move === 0 ? '🤝' : '🗡️';
+    return move === 0 ? '🤝' : '⚔️';
   };
 
   const getOutcomeIcon = (p1Move: number | null, p2Move: number | null): string => {
     if (p1Move === null || p2Move === null) return '⏳';
     if (p1Move === 0 && p2Move === 0) return '🤝';
     if (p1Move === 1 && p2Move === 1) return '⚔️';
-    return '🗡️'; // One cooperates, one defects
+    return '⚔️'; // One partners, one competes
   };
 
   const getOutcomeText = (p1Move: number | null, p2Move: number | null): string => {
     if (p1Move === null || p2Move === null) return 'PENDING';
-    if (p1Move === 0 && p2Move === 0) return 'MUTUAL COOPERATION';
-    if (p1Move === 1 && p2Move === 1) return 'MUTUAL BETRAYAL';
-    return 'BETRAYAL';
+    if (p1Move === 0 && p2Move === 0) return 'STRATEGIC PARTNERSHIP';
+    if (p1Move === 1 && p2Move === 1) return 'PRICE WAR';
+    return 'MARKET CAPTURE';
   };
 
   const getCurrentRound = (): Round | null => {
@@ -128,34 +128,34 @@ const CellView: React.FC<CellViewProps> = ({
   return (
     <div className="max-w-4xl mx-auto">
       <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-red-900/40 to-orange-900/40 rounded-t-3xl border-t-4 border-l-4 border-r-4 border-red-500/50 shadow-2xl" />
-        <div className="absolute inset-1 bg-black/70 rounded-t-2xl border-t-2 border-l-2 border-r-2 border-red-400/30" />
-        
+        <div className="absolute inset-0 bg-gradient-to-r from-teal-900/40 to-cyan-900/40 rounded-t-3xl border-t-4 border-l-4 border-r-4 border-teal-500/50 shadow-2xl" />
+        <div className="absolute inset-1 bg-black/70 rounded-t-2xl border-t-2 border-l-2 border-r-2 border-teal-400/30" />
+
         <div className="absolute inset-0 opacity-30">
           <div className="h-full flex justify-center items-center">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="w-1 h-full bg-gradient-to-b from-red-400 to-red-700 mx-4 shadow-xl" />
+              <div key={i} className="w-1 h-full bg-gradient-to-b from-teal-400 to-cyan-700 mx-4 shadow-xl" />
             ))}
           </div>
         </div>
-        
-        <div className="absolute top-2 left-2 w-3 h-3 bg-red-500 rounded-full animate-ping" />
-        <div className="absolute top-2 right-2 w-3 h-3 bg-red-500 rounded-full animate-ping" style={{ animationDelay: '0.5s' }} />
-        
+
+        <div className="absolute top-2 left-2 w-3 h-3 bg-teal-500 rounded-full animate-ping" />
+        <div className="absolute top-2 right-2 w-3 h-3 bg-cyan-500 rounded-full animate-ping" style={{ animationDelay: '0.5s' }} />
+
         <div className="relative z-10 p-8">
           <div className="flex justify-between items-center">
             <div className="text-center flex-1">
-              <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-orange-400 to-yellow-400 mb-4 tracking-wider drop-shadow-2xl">
-                ⛓️ CELL #{cell.id} ⛓️
+              <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-teal-400 via-cyan-400 to-blue-400 mb-4 tracking-wider drop-shadow-2xl">
+                💼 DEAL #{cell.id} 💼
               </h1>
-              <div className="flex justify-center items-center gap-6 text-orange-200">
-                <div className="bg-black/50 px-4 py-2 rounded-xl border border-orange-500/30">
-                  <span className="text-orange-400 font-mono text-sm tracking-wider">ROUND:</span>
-                  <span className="text-orange-200 font-black ml-2">Round {cell.currentRound}</span>
+              <div className="flex justify-center items-center gap-6 text-teal-200">
+                <div className="bg-black/50 px-4 py-2 rounded-xl border border-teal-500/30">
+                  <span className="text-teal-400 font-mono text-sm tracking-wider">ROUND:</span>
+                  <span className="text-teal-200 font-black ml-2">Round {cell.currentRound}</span>
                 </div>
-                <div className="bg-black/50 px-4 py-2 rounded-xl border border-orange-500/30">
-                  <span className="text-orange-400 font-mono text-sm tracking-wider">STAKE:</span>
-                  <span className="text-orange-200 font-black ml-2">{formatEther(cell.stake)} ETH</span>
+                <div className="bg-black/50 px-4 py-2 rounded-xl border border-teal-500/30">
+                  <span className="text-teal-400 font-mono text-sm tracking-wider">STAKE:</span>
+                  <span className="text-teal-200 font-black ml-2">{formatEther(cell.stake)} ETH</span>
                 </div>
               </div>
             </div>
@@ -173,7 +173,7 @@ const CellView: React.FC<CellViewProps> = ({
                 className="group relative bg-gradient-to-r from-gray-700 to-gray-800 hover:from-gray-600 hover:to-gray-700 text-white px-6 py-3 rounded-xl font-black tracking-wider transition-all duration-300 transform hover:scale-110 border-2 border-gray-500/50 hover:border-gray-400"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-gray-400/20 to-gray-600/20 rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300" />
-                <span className="relative z-10">🚪 ESCAPE</span>
+                <span className="relative z-10">🚪 EXIT</span>
               </button>
             </div>
           </div>
@@ -181,13 +181,13 @@ const CellView: React.FC<CellViewProps> = ({
       </div>
 
       <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-red-900/30 to-orange-900/30 border-l-4 border-r-4 border-red-500/50 shadow-xl" />
-        <div className="absolute inset-1 bg-black/60 border-l-2 border-r-2 border-red-400/30" />
-        
+        <div className="absolute inset-0 bg-gradient-to-r from-teal-900/30 to-cyan-900/30 border-l-4 border-r-4 border-teal-500/50 shadow-xl" />
+        <div className="absolute inset-1 bg-black/60 border-l-2 border-r-2 border-teal-400/30" />
+
         <div className="relative z-10 p-8">
           <div className="text-center mb-6">
-            <h2 className="text-3xl font-black text-orange-400 tracking-wider">👥 INMATES 👥</h2>
-            <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-orange-500 to-transparent mt-2" />
+            <h2 className="text-3xl font-black text-teal-400 tracking-wider">👥 FOUNDERS 👥</h2>
+            <div className="w-full h-0.5 bg-gradient-to-r from-transparent via-teal-500 to-transparent mt-2" />
           </div>
           
           <div className="grid grid-cols-2 gap-8">
@@ -197,8 +197,8 @@ const CellView: React.FC<CellViewProps> = ({
               <div className="absolute inset-1 bg-black/70 rounded-xl border border-blue-400/30" />
               
               <div className="relative z-10 p-6 text-center">
-                <div className="text-4xl mb-3">👨‍⚖️</div>
-                <h3 className="text-xl font-black text-blue-300 mb-3 tracking-wider">PRISONER #1</h3>
+                <div className="text-4xl mb-3">👔</div>
+                <h3 className="text-xl font-black text-blue-300 mb-3 tracking-wider">FOUNDER #1</h3>
                 <div className="bg-black/50 px-4 py-2 rounded-lg border border-blue-500/30 mb-4">
                   <p className="text-blue-200 font-mono text-sm tracking-wider">
                     {cell.player1.slice(0, 8)}...{cell.player1.slice(-6)}
@@ -218,8 +218,8 @@ const CellView: React.FC<CellViewProps> = ({
               <div className="absolute inset-1 bg-black/70 rounded-xl border border-purple-400/30" />
               
               <div className="relative z-10 p-6 text-center">
-                <div className="text-4xl mb-3">👩‍⚖️</div>
-                <h3 className="text-xl font-black text-purple-300 mb-3 tracking-wider">PRISONER #2</h3>
+                <div className="text-4xl mb-3">💼</div>
+                <h3 className="text-xl font-black text-purple-300 mb-3 tracking-wider">FOUNDER #2</h3>
                 <div className="bg-black/50 px-4 py-2 rounded-lg border border-purple-500/30 mb-4">
                   <p className="text-purple-200 font-mono text-sm tracking-wider">
                     {cell.player2.slice(0, 8)}...{cell.player2.slice(-6)}
@@ -238,69 +238,69 @@ const CellView: React.FC<CellViewProps> = ({
 
       {isParticipant && !cell.isComplete && (
         <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-red-900/30 to-orange-900/30 border-l-4 border-r-4 border-red-500/50 shadow-xl" />
-          <div className="absolute inset-1 bg-black/60 border-l-2 border-r-2 border-red-400/30" />
-          
+          <div className="absolute inset-0 bg-gradient-to-r from-teal-900/30 to-cyan-900/30 border-l-4 border-r-4 border-teal-500/50 shadow-xl" />
+          <div className="absolute inset-1 bg-black/60 border-l-2 border-r-2 border-teal-400/30" />
+
           <div className="relative z-10 p-8">
             {canMakeMove() && (
               <div className="text-center">
                 <div className="mb-8">
-                  <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-orange-400 to-yellow-400 mb-4 tracking-wider drop-shadow-2xl">
-                    ⚖️ THE CHOICE ⚖️
+                  <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-teal-400 via-cyan-400 to-blue-400 mb-4 tracking-wider drop-shadow-2xl">
+                    🎯 STRATEGIC DECISION 🎯
                   </h2>
-                  <div className="w-full h-1 bg-gradient-to-r from-transparent via-orange-500 to-transparent animate-pulse mb-6" />
-                  <p className="text-orange-200 text-lg font-mono tracking-wide max-w-2xl mx-auto">
-                    YOUR FATE HANGS IN THE BALANCE • TRUST OR BETRAY • CHOOSE WISELY
+                  <div className="w-full h-1 bg-gradient-to-r from-transparent via-teal-500 to-transparent animate-pulse mb-6" />
+                  <p className="text-teal-200 text-lg font-mono tracking-wide max-w-2xl mx-auto">
+                    BUILD PARTNERSHIPS OR CAPTURE MARKET SHARE • CHOOSE YOUR STRATEGY
                   </p>
                 </div>
                 
                 <div className="flex gap-8 justify-center">
-                  {/* Cooperate Button */}
+                  {/* Partner Button */}
                   <div className="relative group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-900/50 to-cyan-900/50 rounded-2xl border-2 border-blue-500/50 shadow-2xl group-hover:shadow-blue-500/30 transition-all duration-500" />
-                    <div className="absolute inset-1 bg-black/70 rounded-xl border border-blue-400/30" />
-                    
+                    <div className="absolute inset-0 bg-gradient-to-br from-teal-900/50 to-emerald-900/50 rounded-2xl border-2 border-teal-500/50 shadow-2xl group-hover:shadow-teal-500/30 transition-all duration-500" />
+                    <div className="absolute inset-1 bg-black/70 rounded-xl border border-teal-400/30" />
+
                     <button
                       onClick={() => handleMoveClick(0)}
                       disabled={moveLoading}
-                      className="relative z-10 group bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 disabled:from-gray-600 disabled:to-gray-700 text-white px-12 py-6 rounded-xl font-black text-xl tracking-wider transition-all duration-300 transform hover:scale-110 hover:shadow-2xl disabled:hover:scale-100 border-2 border-blue-400/50 hover:border-blue-300 m-2"
+                      className="relative z-10 group bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 disabled:from-gray-600 disabled:to-gray-700 text-white px-12 py-6 rounded-xl font-black text-xl tracking-wider transition-all duration-300 transform hover:scale-110 hover:shadow-2xl disabled:hover:scale-100 border-2 border-teal-400/50 hover:border-teal-300 m-2"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-cyan-600/20 rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-teal-400/20 to-emerald-600/20 rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300" />
                       <span className="relative z-10 flex items-center gap-3">
-                        🤝 COOPERATE
+                        🤝 PARTNER
                       </span>
                     </button>
                     <div className="text-center mt-4">
-                      <p className="text-blue-300 font-mono text-sm tracking-wider">TRUST • HONOR • UNITY</p>
+                      <p className="text-teal-300 font-mono text-sm tracking-wider">COLLABORATE • GROW • BUILD</p>
                     </div>
                   </div>
-                  
-                  {/* Defect Button */}
+
+                  {/* Compete Button */}
                   <div className="relative group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-red-900/50 to-orange-900/50 rounded-2xl border-2 border-red-500/50 shadow-2xl group-hover:shadow-red-500/30 transition-all duration-500" />
-                    <div className="absolute inset-1 bg-black/70 rounded-xl border border-red-400/30" />
-                    
+                    <div className="absolute inset-0 bg-gradient-to-br from-orange-900/50 to-amber-900/50 rounded-2xl border-2 border-orange-500/50 shadow-2xl group-hover:shadow-orange-500/30 transition-all duration-500" />
+                    <div className="absolute inset-1 bg-black/70 rounded-xl border border-orange-400/30" />
+
                     <button
                       onClick={() => handleMoveClick(1)}
                       disabled={moveLoading}
-                      className="relative z-10 group bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 disabled:from-gray-600 disabled:to-gray-700 text-white px-12 py-6 rounded-xl font-black text-xl tracking-wider transition-all duration-300 transform hover:scale-110 hover:shadow-2xl disabled:hover:scale-100 border-2 border-red-400/50 hover:border-red-300 m-2"
+                      className="relative z-10 group bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 disabled:from-gray-600 disabled:to-gray-700 text-white px-12 py-6 rounded-xl font-black text-xl tracking-wider transition-all duration-300 transform hover:scale-110 hover:shadow-2xl disabled:hover:scale-100 border-2 border-orange-400/50 hover:border-orange-300 m-2"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-red-400/20 to-orange-600/20 rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 to-amber-600/20 rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300" />
                       <span className="relative z-10 flex items-center gap-3">
-                        ⚔️ BETRAY
+                        ⚔️ COMPETE
                       </span>
                     </button>
                     <div className="text-center mt-4">
-                      <p className="text-red-300 font-mono text-sm tracking-wider">POWER • GREED • SURVIVAL</p>
+                      <p className="text-orange-300 font-mono text-sm tracking-wider">CAPTURE • EXPAND • WIN</p>
                     </div>
                   </div>
                 </div>
                 
                 {moveLoading && (
                   <div className="mt-8 text-center">
-                    <div className="inline-flex items-center gap-3 bg-black/50 px-6 py-3 rounded-xl border border-orange-500/30">
-                      <div className="w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
-                      <span className="text-orange-300 font-mono tracking-wider">PROCESSING DECISION...</span>
+                    <div className="inline-flex items-center gap-3 bg-black/50 px-6 py-3 rounded-xl border border-teal-500/30">
+                      <div className="w-5 h-5 border-2 border-teal-400 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-teal-300 font-mono tracking-wider">PROCESSING DECISION...</span>
                     </div>
                   </div>
                 )}
@@ -316,20 +316,20 @@ const CellView: React.FC<CellViewProps> = ({
           <h2 className="text-xl font-bold text-white mb-4">Current Round</h2>
           {getCurrentRound() === null ? (
             <div className="text-center py-8">
-              <div className="inline-flex items-center gap-3 bg-black/50 px-6 py-3 rounded-xl border border-orange-500/30">
-                <div className="w-5 h-5 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
-                <span className="text-orange-300 font-mono tracking-wider">Syncing new round...</span>
+              <div className="inline-flex items-center gap-3 bg-black/50 px-6 py-3 rounded-xl border border-teal-500/30">
+                <div className="w-5 h-5 border-2 border-teal-400 border-t-transparent rounded-full animate-spin" />
+                <span className="text-teal-300 font-mono tracking-wider">Syncing new round...</span>
               </div>
             </div>
           ) : needsContinuationDecision() && (
-            <div className="relative z-20 bg-gradient-to-br from-orange-900 via-orange-800 to-orange-900 border-2 border-orange-500/50 rounded-2xl shadow-2xl p-6 mt-4">
-              <div className="absolute inset-0 bg-gradient-to-r from-orange-400/10 to-red-400/10 rounded-2xl blur-xl" />
+            <div className="relative z-20 bg-gradient-to-br from-teal-900 via-cyan-800 to-teal-900 border-2 border-teal-500/50 rounded-2xl shadow-2xl p-6 mt-4">
+              <div className="absolute inset-0 bg-gradient-to-r from-teal-400/10 to-cyan-400/10 rounded-2xl blur-xl" />
               <div className="relative z-10">
-                <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-300 to-red-300 mb-6 text-center tracking-wide">
+                <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-cyan-300 mb-6 text-center tracking-wide">
                   🚨 CONTINUATION DECISION REQUIRED 🚨
                 </h3>
-                <p className="text-orange-200 text-center mb-6 text-sm">
-                  Choose your fate: Continue the psychological experiment or escape the cell?
+                <p className="text-teal-200 text-center mb-6 text-sm">
+                  Continue the deal for another round or exit and distribute payouts?
                 </p>
                 <div className="flex gap-6 justify-center">
                   <button
@@ -346,7 +346,7 @@ const CellView: React.FC<CellViewProps> = ({
                         </>
                       ) : (
                         <>
-                          🔄 CONTINUE EXPERIMENT
+                          🔄 CONTINUE DEAL
                         </>
                       )}
                     </span>
@@ -354,9 +354,9 @@ const CellView: React.FC<CellViewProps> = ({
                   <button
                     onClick={() => handleContinuationClick(false)}
                     disabled={moveLoading}
-                    className="group relative z-10 bg-gradient-to-r from-red-600 via-red-700 to-red-800 hover:from-red-500 hover:via-red-600 hover:to-red-700 disabled:from-gray-600 disabled:via-gray-700 disabled:to-gray-800 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl border-2 border-red-400/30 hover:border-red-300/50"
+                    className="group relative z-10 bg-gradient-to-r from-orange-600 via-orange-700 to-amber-800 hover:from-orange-500 hover:via-orange-600 hover:to-amber-700 disabled:from-gray-600 disabled:via-gray-700 disabled:to-gray-800 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl border-2 border-orange-400/30 hover:border-orange-300/50"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-red-400/20 to-red-600/20 rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 to-amber-600/20 rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300" />
                     <span className="relative z-10 flex items-center gap-2">
                       {moveLoading ? (
                         <>
@@ -365,7 +365,7 @@ const CellView: React.FC<CellViewProps> = ({
                         </>
                       ) : (
                         <>
-                          🚪 ESCAPE CELL
+                          🚪 EXIT DEAL
                         </>
                       )}
                     </span>
@@ -418,11 +418,11 @@ const CellView: React.FC<CellViewProps> = ({
                 <div className="mt-4 text-center">
                   {continuationStatus.p1Wants && continuationStatus.p2Wants ? (
                     <p className="text-green-400 font-semibold">
-                      ✓ Both players want to continue - Next round starting...
+                      ✓ Both founders want to continue - Next round starting...
                     </p>
                   ) : (
                     <p className="text-red-400 font-semibold">
-                      ✗ At least one player wants to exit - Cell will complete...
+                      ✗ At least one founder wants to exit - Deal will complete...
                     </p>
                   )}
                 </div>
@@ -494,13 +494,13 @@ const CellView: React.FC<CellViewProps> = ({
         )}
       </div>
 
-      {/* Cell Complete Status */}
+      {/* Deal Complete Status */}
       {cell.isComplete && (
-        <div className="bg-gradient-to-r from-green-900 to-green-800 rounded-2xl p-6 mt-6 border-2 border-green-500/50">
+        <div className="bg-gradient-to-r from-teal-900 to-emerald-800 rounded-2xl p-6 mt-6 border-2 border-teal-500/50">
           <h2 className="text-2xl font-bold text-white text-center mb-2">
-            🏁 Cell Complete!
+            🏁 Deal Complete!
           </h2>
-          <p className="text-green-200 text-center">
+          <p className="text-teal-200 text-center">
             All rounds have been completed. Final payouts have been distributed.
           </p>
         </div>
