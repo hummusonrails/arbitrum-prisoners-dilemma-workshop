@@ -150,6 +150,42 @@ export function useCellActions({
     try {
       setMoveLoading(true);
       setError(null);
+
+      console.log('[useCellActions] Submitting move:', { cellId, move, address });
+
+      // First, try to simulate the transaction to catch errors early
+      try {
+        await publicClient.simulateContract({
+          address: CONTRACT_ADDRESS,
+          abi,
+          functionName: 'submitMove',
+          args: [BigInt(cellId), BigInt(move)],
+          account: address as `0x${string}`,
+        });
+      } catch (simError: any) {
+        console.error('[useCellActions] Simulation failed:', simError);
+        // Extract readable error message
+        let errorMessage = 'Transaction would fail';
+        if (simError.message) {
+          if (simError.message.includes('CellIsComplete')) {
+            errorMessage = 'This game has already been completed';
+          } else if (simError.message.includes('NeedPlayer2')) {
+            errorMessage = 'Waiting for second player to join';
+          } else if (simError.message.includes('NotInCell')) {
+            errorMessage = 'You are not a player in this game';
+          } else if (simError.message.includes('NoRoundStarted')) {
+            errorMessage = 'No round has been started yet';
+          } else if (simError.message.includes('RoundNotReady')) {
+            errorMessage = 'Round is not ready for moves';
+          } else if (simError.message.includes('RoundAlreadyFinished')) {
+            errorMessage = 'You have already submitted your move for this round';
+          } else {
+            errorMessage = simError.message;
+          }
+        }
+        throw new Error(errorMessage);
+      }
+
       const hash = await walletClient.writeContract({
         address: CONTRACT_ADDRESS,
         abi,
@@ -158,6 +194,8 @@ export function useCellActions({
         account: address as `0x${string}`,
         chain: defaultChain,
       });
+
+      console.log('[useCellActions] Move transaction submitted:', hash);
 
       // Wait for transaction confirmation before updating state
       const receipt = await publicClient.waitForTransactionReceipt({
@@ -170,9 +208,12 @@ export function useCellActions({
         throw new Error('Transaction reverted');
       }
 
+      console.log('[useCellActions] Move transaction confirmed');
+
       // Refresh state after successful transaction
       await updateCellsState();
     } catch (error) {
+      console.error('[useCellActions] Move failed:', error);
       setError('Failed to submit move: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setMoveLoading(false);

@@ -118,6 +118,14 @@ const CellView: React.FC<CellViewProps> = ({
   };
 
   const handleMoveClick = (move: number) => {
+    console.log('[CellView] Submitting move:', {
+      cellId: cell.id,
+      move,
+      currentRound: cell.currentRound,
+      roundsLength: cell.rounds.length,
+      isComplete: cell.isComplete,
+      cell
+    });
     onMove(cell.id, move);
   };
 
