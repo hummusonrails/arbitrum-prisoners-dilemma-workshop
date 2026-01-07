@@ -99,22 +99,22 @@ export default function App() {
           </div>
         </div>
         
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-orange-400 opacity-5 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-red-400 opacity-5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-400 opacity-5 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-teal-400 opacity-5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
         
         <div className="relative z-10 text-center max-w-2xl mx-auto px-8">
           <div className="mb-12">
-            <h1 className="text-8xl font-bold mb-6 bg-gradient-to-r from-orange-400 via-red-500 to-orange-600 bg-clip-text text-transparent">
-              PRISONER'S
+            <h1 className="text-8xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-cyan-500 to-teal-600 bg-clip-text text-transparent">
+              FOUNDER'S
             </h1>
-            <h2 className="text-6xl font-bold mb-8 bg-gradient-to-r from-red-400 via-orange-500 to-red-600 bg-clip-text text-transparent">
+            <h2 className="text-6xl font-bold mb-8 bg-gradient-to-r from-teal-400 via-green-500 to-emerald-600 bg-clip-text text-transparent">
               DILEMMA
             </h2>
             <div className="text-gray-300 text-xl mb-8">
-              A game of trust, betrayal, and consequence
+              Strategic decisions, cooperation, and competition
             </div>
-            <div className="text-red-400 text-lg font-mono tracking-wider">
-              CONNECTION REQUIRED TO ENTER THE FACILITY
+            <div className="text-cyan-400 text-lg font-mono tracking-wider">
+              CONNECT YOUR WALLET TO BEGIN
             </div>
           </div>
           
@@ -122,7 +122,7 @@ export default function App() {
             <ConnectWalletButton />
             
             <div className="text-gray-400 text-sm">
-              Connect your wallet to begin your sentence
+              Connect your wallet to start exploring strategic decisions
             </div>
           </div>
         </div>
@@ -150,21 +150,21 @@ export default function App() {
           </div>
         </div>
         
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-orange-400 opacity-5 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-red-400 opacity-5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-400 opacity-5 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-teal-400 opacity-5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
         
         <div className="relative z-10 text-center max-w-2xl mx-auto px-8">
           <div className="mb-12">
-            <h1 className="text-8xl font-bold mb-6 bg-gradient-to-r from-orange-400 via-red-500 to-orange-600 bg-clip-text text-transparent">
-              PRISONER'S
+            <h1 className="text-8xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-cyan-500 to-teal-600 bg-clip-text text-transparent">
+              FOUNDER'S
             </h1>
-            <h2 className="text-6xl font-bold mb-8 bg-gradient-to-r from-red-400 via-orange-500 to-red-600 bg-clip-text text-transparent">
+            <h2 className="text-6xl font-bold mb-8 bg-gradient-to-r from-teal-400 via-green-500 to-emerald-600 bg-clip-text text-transparent">
               DILEMMA
             </h2>
             <div className="text-gray-300 text-xl mb-8">
-              A game of trust, betrayal, and consequence
+              Strategic decisions, cooperation, and competition
             </div>
-            <div className="text-red-400 text-lg font-mono tracking-wider">
+            <div className="text-cyan-400 text-lg font-mono tracking-wider">
               CONTRACT INITIALIZATION REQUIRED
             </div>
           </div>
@@ -173,9 +173,9 @@ export default function App() {
             <button
               onClick={() => walletClient && address && initializeContract(walletClient, address as `0x${string}`, (msg: string | null) => setError(msg ?? undefined), setInitializeLoading)}
               disabled={!walletClient || !address || initializeLoading}
-              className="group relative bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 disabled:from-gray-600 disabled:to-gray-700 text-white px-8 py-4 rounded-xl font-black text-lg tracking-wider transition-all duration-300 transform hover:scale-110 hover:shadow-2xl disabled:hover:scale-100 border-2 border-red-400/50 hover:border-red-300"
+              className="group relative bg-gradient-to-r from-teal-600 to-emerald-700 hover:from-teal-500 hover:to-emerald-600 disabled:from-gray-600 disabled:to-gray-700 text-white px-8 py-4 rounded-xl font-black text-lg tracking-wider transition-all duration-300 transform hover:scale-110 hover:shadow-2xl disabled:hover:scale-100 border-2 border-teal-400/50 hover:border-teal-300"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-red-400/20 to-red-600/20 rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300" />
+              <div className="absolute inset-0 bg-gradient-to-r from-teal-400/20 to-emerald-600/20 rounded-xl blur-xl group-hover:blur-2xl transition-all duration-300" />
               <span className="relative z-10">
                 {initializeLoading ? (
                   <div className="flex items-center gap-3">
@@ -183,14 +183,14 @@ export default function App() {
                     INITIALIZING CONTRACT...
                   </div>
                 ) : (
-                  'INITIALIZE SECURITY PROTOCOLS'
+                  'INITIALIZE GAME SYSTEM'
                 )}
               </span>
             </button>
           </div>
         </div>
         
-        <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-red-900/50 to-transparent" />
+        <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-teal-900/50 to-transparent" />
       </div>
     );
   }

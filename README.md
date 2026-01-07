@@ -1,7 +1,7 @@
-# 🎯 Arbitrum Prisoner's Dilemma Iterated Game Workshop
+# 🎯 Arbitrum Founder's Dilemma Workshop
 
 > [!NOTE]
-> Learn game theory and smart contract development on Arbitrum using Stylus (Rust). Build and deploy a multiplayer, iterated Prisoner's Dilemma game with strategic decision-making, token staking, and multiple rounds per match. All in a preconfigured Codespace!
+> Learn strategic decision-making and smart contract development on Arbitrum using Stylus (Rust). Build and deploy a multiplayer game theory simulation exploring cooperation vs. competition in business, with ETH staking and iterative strategy building. Perfect for founders learning about incentive design, behavioral economics, and strategic partnerships. All in a preconfigured Codespace!
 
 <div align="center">
   <img src="screenshot.png" alt="Prisoner's Dilemma Game Screenshot" width="50%">
@@ -9,46 +9,47 @@
 
 | Learning Outcomes |
 |---|
-| Understand game theory and the Prisoner's Dilemma |
+| Understand game theory, strategic cooperation, and competitive dynamics in business |
+| Learn incentive design principles applicable to partnerships, pricing, and market strategy |
+| Explore behavioral economics (Kahneman's loss aversion) in founder decision-making |
 | Deploy and interact with Stylus (Rust) smart contracts on Arbitrum |
-| Implement strategic multiplayer games with token staking and multiple rounds |
-| Use cargo stylus, foundry (cast), and viem + wagmi |
-| Connect game contracts to a React + Vite + TypeScript frontend with real-time state updates |
-| Practice contract interaction patterns, state management, and iterative game logic |
+| Build strategic multiplayer simulations with token staking and iterative rounds |
+| Use cargo stylus, foundry (cast), and viem + wagmi for Web3 development |
+| Apply game theory concepts to real-world founder challenges |
 
-## 🎮 Game Rules: Iterated Prisoner's Dilemma
+## 🎮 Game Rules: The Founder's Dilemma
 
 
-The Iterated Prisoner's Dilemma is a classic game theory scenario where two players repeatedly choose between **cooperation** and **defection** over multiple rounds, without knowing the other's choice in each round. This version introduces strategic depth, as players can adapt their choices based on previous outcomes.
+The Founder's Dilemma is a classic game theory scenario adapted for business strategy. Two founders repeatedly choose between **partnering** and **competing** over multiple rounds, without knowing the other's choice in each round. This simulation mirrors real-world decisions around collaboration vs. competition in markets, partnerships, and strategic positioning. Players can adapt their strategy based on previous outcomes—just like in business.
 
 ### How It Works
 
-1. **Join a Cell**: Players stake ETH to create or join a cell (game instance). Each cell is assigned a random number of rounds (between 2 and 5) for iterated play.
-2. **Play Rounds**: In each round, both players secretly choose to **Cooperate** (0) or **Defect** (1). Choices are revealed simultaneously.
-3. **Continue or Exit**: After each round, both players must independently decide whether to continue to the next round or exit. The game continues only if both agree and the maximum rounds for the cell have not been reached.
-4. **Payouts & Results**: After the final round or if a player exits, payouts are distributed based on the cumulative results of all rounds played in the cell.
+1. **Enter a Deal**: Players stake ETH to create or join a business deal (game instance). Each deal is assigned a random number of rounds (between 2 and 5) for iterative strategy.
+2. **Make Strategic Choices**: In each round, both players secretly choose to **Partner** (collaborate) or **Compete** (capture market share). Choices are revealed simultaneously.
+3. **Continue or Exit**: After each round, both players must independently decide whether to continue to the next round or exit the deal. The game continues only if both agree and the maximum rounds haven't been reached.
+4. **Payouts & Results**: After the final round or if a player exits, payouts are distributed based on the cumulative results of all rounds played in the deal.
 
 
 ### Payoff Matrix (Per Round)
 
-| Your Move | Opponent's Move | Your Payout | Opponent's Payout |
+| Your Strategy | Their Strategy | Your Payout | Their Payout |
 |-----------|-----------------|-------------|-------------------|
-| 🤝 Cooperate | 🤝 Cooperate | **1.0x stake** | **1.0x stake** |
-| 🤝 Cooperate | 💀 Defect | **0.5x stake** | **1.5x stake** |
-| 💀 Defect | 🤝 Cooperate | **1.5x stake** | **0.5x stake** |
-| 💀 Defect | 💀 Defect | **0.5x stake** | **0.5x stake** |
+| 🤝 Partner | 🤝 Partner | **1.0x stake** | **1.0x stake** |
+| 🤝 Partner | ⚔️ Compete | **0.5x stake** | **1.5x stake** |
+| ⚔️ Compete | 🤝 Partner | **1.5x stake** | **0.5x stake** |
+| ⚔️ Compete | ⚔️ Compete | **0.5x stake** | **0.5x stake** |
 
 
-### Iterative Strategic Considerations
+### Business Strategy Considerations
 
-- **Memory & Adaptation**: Players can adjust their strategy based on previous rounds (e.g., tit-for-tat, always defect, always cooperate).
-- **Continuation Decisions**: After each round, both players must opt-in to continue. If either declines, the cell ends and payouts are distributed.
-- **Randomized Rounds**: Each cell has a random number of rounds (2-5), so players cannot always predict when the game will end, increasing strategic uncertainty.
-- **Mutual Cooperation**: Both players get a fair return (1.0x per round)
-- **Mutual Defection**: Both players lose (0.5x per round) - the "tragedy" of the dilemma
-- **Mixed Strategies**: The defector wins big (1.5x per round), but the cooperator loses (0.5x per round)
+- **Memory & Adaptation**: Players can adjust their strategy based on previous rounds (e.g., reciprocal partnership, aggressive competition, collaborative approach).
+- **Continuation Decisions**: After each round, both players must opt-in to continue the deal. If either exits, the deal ends and payouts are distributed—mirroring real business relationships.
+- **Strategic Uncertainty**: Each deal has a random number of rounds (2-5), so players cannot always predict when negotiations will end, increasing strategic complexity.
+- **Strategic Partnership**: Both founders grow together (1.0x per round) - the collaborative approach
+- **Price War**: Both lose market value (0.5x per round) - the competitive trap
+- **Market Capture**: The aggressive player gains (1.5x per round), while the partner loses (0.5x per round) - exploitation risk
 
-**The Dilemma**: While mutual cooperation yields the best collective outcome, individual incentives push toward defection—especially in the final round!
+**The Founder's Dilemma**: While mutual partnership yields the best collective outcome, individual incentives push toward competition—especially as the relationship nears its end. This mirrors real-world challenges in business alliances, pricing strategy, and strategic partnerships.
 
 ## Quick Start (GitHub Codespaces)
 
@@ -161,53 +162,53 @@ cargo stylus export-abi --json > ../../frontend/src/abi/PrisonersDilemma.json
 const CONTRACT_ADDRESS = '0x...' as `0x${string}`;
 ```
 
-### 6. Frontend Development Workshop 🌐 (Iterated Game)
+### 6. Frontend Workshop 🌐 (Strategic Business Simulation)
 
 > [!TIP]
-> **Main Learning Focus**: The contract is complete! Your task is to study and understand the iterated game theory implementation, continuation logic, and Web3 integration patterns.
+> **Main Learning Focus**: The contract is complete! Your task is to study and understand the strategic decision-making implementation, deal continuation logic, and how Web3 enables trustless business simulations.
 
-#### 📚 **Learning Objectives**
-- Master strategic game interactions on blockchain
-- Understand ETH staking and payout mechanisms
-- Learn game state management and real-time updates
-- Practice advanced contract interaction patterns
-- Explore game theory concepts in practice
+#### 📚 **Learning Objectives for Founders**
+- Master strategic interaction patterns applicable to real business scenarios
+- Understand stake-based incentive mechanisms and payout distributions
+- Learn how blockchain enables trustless multi-party agreements
+- Practice advanced smart contract interaction patterns
+- Apply game theory concepts to founder decision-making
 
-#### 🔍 **Study These Game Components**
+#### 🔍 **Study These Business Strategy Components**
 
-The frontend demonstrates advanced game mechanics:
+The frontend demonstrates strategic business mechanics:
 
-**1. Iterated Strategic Decision Making**
-- 📋 **Task 1**: Explore the cooperate vs defect choice interface for each round
-- � **Task 2**: Study how continuation decisions are handled after each round
-- � **Task 3**: Learn how the frontend and contract keep all players in sync across rounds
+**1. Strategic Decision Making (Partner vs. Compete)**
+- 📋 **Task 1**: Explore the partner vs. compete choice interface for each round
+- 🔄 **Task 2**: Study how deal continuation decisions mirror real business relationships
+- 🔗 **Task 3**: Learn how the frontend and contract maintain trustless synchronization across multiple rounds
 
+**2. Payout Distribution & Incentive Design**
+- 📖 **Task 1**: Understand cumulative payout calculations across multiple rounds
+- ✍️ **Task 2**: Study the payoff matrix implementation and how it creates strategic tension
+- 🎯 **Task 3**: Learn transaction confirmation and state update patterns for multi-round deals
 
-**2. Iterated Payout Distribution**
-- 📖 **Task 1**: Understand cumulative ETH payout calculations across multiple rounds
-- ✍️ **Task 2**: Study the payoff matrix implementation per round and for the final cell
-- 🎯 **Task 3**: Learn transaction confirmation and state update patterns for multi-round games
+#### 🎯 **Game Theory Concepts for Founders**
 
-#### 🎯 **Iterated Game Theory Learning Points**
-
-**Nash Equilibrium (Iterated)**
-- Both players defecting in every round is the Nash equilibrium, but strategies like tit-for-tat can outperform in repeated play.
+**Nash Equilibrium in Business**
+- Both founders competing in every round is the Nash equilibrium, but collaborative strategies like tit-for-tat can outperform in repeated business relationships.
 
 **Pareto Efficiency**
-- Mutual cooperation in every round is Pareto optimal (best collective outcome), but individual incentives and uncertainty about the final round often prevent this outcome.
+- Mutual partnership in every round is Pareto optimal (best collective outcome), but individual competitive incentives and uncertainty about the final round often prevent this—just like in real markets.
 
-**Risk vs Reward**
-- Cooperation: Safe but vulnerable to exploitation, especially if the other player defects late.
-- Defection: Aggressive but may lose out on long-term gains if the other player retaliates.
+**Risk vs Reward in Business Strategy**
+- **Partnership**: Builds long-term value but vulnerable to exploitation if the other party competes late
+- **Competition**: Captures short-term gains but may destroy long-term relationship value and miss collaborative opportunities
 
-#### 🚀 **Workshop Tasks**
-1. **Play the Game**: Create games and test different strategies
-2. **Analyze Outcomes**: Track your wins/losses with different approaches
-3. **Study Incentives**: Understand why players might choose each strategy
-4. **Test Edge Cases**: What happens with different stake amounts?
-5. **Explore Psychology**: How does knowing your opponent affect decisions?
+#### 🚀 **Workshop Tasks for Founders**
+1. **Simulate Strategic Scenarios**: Create deals and test different strategies (always partner, always compete, tit-for-tat, adaptive)
+2. **Analyze Business Outcomes**: Track your wins/losses and cumulative returns with different approaches
+3. **Study Incentive Structures**: Understand why founders might choose partnership vs. competition in different contexts
+4. **Test Stake Dynamics**: What happens with different stake amounts? How does risk affect strategy?
+5. **Explore Behavioral Psychology**: How does relationship uncertainty and anonymity affect strategic choices?
+6. **Design Better Incentives**: Think about how to modify the deal structure to encourage desired behaviors
 
-### 7. Start the Frontend (with Real-Time Iterated Game UI)
+### 7. Start the Frontend (with Real-Time Strategic Deal Interface)
 
 ```bash
 pnpm --filter frontend dev
@@ -270,35 +271,69 @@ pnpm --filter prisoners-dilemma-contract test
 **Codespaces RPC:**
 - Use the forwarded port URL from the "Ports" tab (e.g., `https://your-codespace-8547.app.github.dev`)
 
-## 🧠 Iterated Game Theory Insights
+## 🧠 Game Theory for Founders
 
-The Prisoner's Dilemma illustrates fundamental concepts in:
+The Founder's Dilemma illustrates fundamental concepts in strategic business decision-making:
 
-- **Economics**: Market competition and cooperation
-- **Politics**: International relations and treaties
-- **Biology**: Evolution of cooperation
-- **Blockchain**: Protocol design and validator behavior
+- **Partnership Strategy**: When to collaborate vs. when to compete for market share
+- **Pricing Decisions**: Premium positioning vs. price wars with competitors
+- **Resource Allocation**: Shared infrastructure vs. proprietary development
+- **Market Entry**: Cooperative ecosystem building vs. aggressive competition
+- **Behavioral Economics**: Loss aversion and risk preferences (Kahneman's research)
 
 ### Strategies to Explore
 
-1. **Always Cooperate**: Optimistic but vulnerable
-2. **Always Defect**: Pessimistic but safe
-3. **Tit-for-Tat**: Start cooperative, then mirror opponent's previous move
-4. **Random**: Unpredictable mixed strategy
+1. **Always Partner**: Collaborative but vulnerable to exploitation - builds trust over time
+2. **Always Compete**: Aggressive but may miss partnership opportunities - captures short-term gains
+3. **Tit-for-Tat**: Start collaborative, then mirror opponent's previous move - establishes reciprocity
+4. **Strategic Flexibility**: Adapt based on context and relationship history
 
-### Real-World Applications
+### Real-World Founder Applications
 
-- **DeFi Protocols**: Validator staking and slashing
-- **DAOs**: Governance participation vs free-riding
-- **MEV**: Cooperation vs competition among searchers
-- **Layer 2s**: Honest vs malicious operator behavior
+**Strategic Partnerships:**
+- **Co-opetition**: When Microsoft and Apple collaborate on standards while competing in markets
+- **Joint Ventures**: Shared investment in new markets vs. going it alone
+- **API Integration**: Open platforms vs. walled gardens
 
-## 🧑‍💻 Workshop Tips
+**Pricing & Competition:**
+- **Price Wars**: Uber vs. Lyft subsidizing rides - both lose money (compete/compete outcome)
+- **Premium Positioning**: Maintaining margins vs. undercutting competitors
+- **Bundling Strategies**: Complementary vs. competing product strategies
 
-- Use different accounts to simulate real multiplayer scenarios
-- Try various stake amounts and see how the number of rounds affects decision-making
-- Experiment with different strategies and track outcomes across multiple rounds
-- Consider the psychological aspects: How does anonymity and round uncertainty affect choices?
-- Think about mechanism design: How could the game be modified to encourage cooperation or longer play?
+**Talent & Resources:**
+- **Hiring Wars**: Bidding up salaries vs. collaborative hiring practices
+- **Acqui-hires**: Acquiring for talent vs. organic team building
+- **Contractor Networks**: Shared talent pools vs. exclusive arrangements
+
+**Fundraising & Growth:**
+- **Cap Table**: Competitive vs. collaborative funding rounds
+- **Market Expansion**: First-mover aggression vs. collaborative market development
+- **Platform Dynamics**: Network effects and ecosystem incentives
+
+### Kahneman's Insights on Founder Decision-Making
+
+Daniel Kahneman's research on behavioral economics reveals critical patterns in how founders make decisions under uncertainty:
+
+- **Loss Aversion**: Founders fear losses more than they value equivalent gains, often leading to overly competitive strategies to avoid losing market share
+- **Anchoring**: Initial partnership terms or pricing decisions heavily influence future strategy
+- **Overconfidence**: Founders often overestimate their ability to "win" in competitive scenarios
+- **Framing Effects**: How choices are framed (partnership opportunity vs. competition threat) dramatically affects decisions
+
+## 🧑‍💻 Workshop Tips for Founders
+
+- **Simulate Real Scenarios**: Use different accounts to test partnership vs. competition dynamics
+- **Stake Matters**: Try various stake amounts - higher stakes often mirror higher-risk business decisions
+- **Track Your Strategy**: Experiment with different approaches and analyze outcomes across multiple deals
+- **Psychology of Business**: Consider how relationship uncertainty and anonymity affect strategic choices
+- **Incentive Design**: Think about how deal structures could be modified to encourage long-term partnerships
+- **Reputation Systems**: In repeated games with the same partner, reputation emerges - just like in business networks
+- **End-Game Dynamics**: Notice how behavior changes near the final round - this mirrors last-mover advantages in business
+
+**Questions to Explore:**
+- When does competition destroy value for both parties?
+- How do repeated interactions build (or destroy) trust?
+- What role does strategic uncertainty play in maintaining cooperation?
+- How would adding reputation scores change behavior?
+- What parallels do you see with your own founder challenges?
 
 Happy strategizing! 🎯
