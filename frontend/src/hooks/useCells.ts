@@ -4,15 +4,10 @@ import type { Cell } from '../types/Cell';
 import { fetchCellData, CONTRACT_ADDRESS } from '../lib/contract';
 import abi from '../abi/PrisonersDilemmaContract.json';
 
-type PermissivePublicClient = {
-  [K in keyof PublicClient]: PublicClient[K];
-} & {
-  account?: any;
-  [key: string]: any;
-};
+type AnyPublicClient = PublicClient<any, any, any>;
 
 interface UseCellsOptions {
-  publicClient: PermissivePublicClient | null;
+  publicClient: AnyPublicClient | null;
   isContractInitialized: boolean;
 }
 
@@ -33,9 +28,6 @@ export function useCells({ publicClient, isContractInitialized }: UseCellsOption
     }
     setLoading(true);
     try {
-      const latestBlock = await publicClient.getBlockNumber();
-      
-
       const cellCounter = await publicClient.readContract({
         address: CONTRACT_ADDRESS,
         abi,

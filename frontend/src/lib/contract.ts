@@ -7,6 +7,8 @@ import { localhost, defaultChain } from '../constants';
 export const CONTRACT_ADDRESS = (import.meta.env.VITE_CONTRACT_ADDRESS || '0x47cec0749bd110bc11f9577a70061202b1b6c034') as `0x${string}`;
 export { abi, localhost, defaultChain };
 
+type AnyPublicClient = PublicClient<any, any, any>;
+
 // Initialize contract
 export const initializeContract = async (
   walletClient: WalletClient | null,
@@ -18,7 +20,7 @@ export const initializeContract = async (
   try {
     setInitializeLoading(true);
     setError(null);
-    const result = await walletClient.writeContract({
+    await walletClient.writeContract({
       address: CONTRACT_ADDRESS,
       abi,
       functionName: 'initialize',
@@ -36,7 +38,7 @@ export const initializeContract = async (
 
 // Check if contract is initialized
 export const checkContractInitialization = async (
-  publicClient: PublicClient | null,
+  publicClient: AnyPublicClient | null,
   setIsContractInitialized: (v: boolean) => void,
   setMinStake: (v: bigint) => void,
   setError: (msg: string | null) => void
@@ -77,7 +79,7 @@ export const checkContractInitialization = async (
 
 // Fetch cell data from contract
 export const fetchCellData = async (
-  publicClient: PublicClient | null,
+  publicClient: AnyPublicClient | null,
   cellId: string,
   forceRefresh: boolean = false
 ): Promise<Cell | null> => {
@@ -196,7 +198,7 @@ export const fetchCellData = async (
 
 // Poll contract initialization status every intervalMs milliseconds
 export const startContractInitializationPolling = (
-  publicClient: PublicClient | null,
+  publicClient: AnyPublicClient | null,
   setIsContractInitialized: (v: boolean) => void,
   setMinStake: (v: bigint) => void,
   setError: (msg: string | null) => void,
@@ -216,7 +218,7 @@ export const startContractInitializationPolling = (
 // Get continuation status for a cell
 // Returns (player1_decided, player1_wants, player2_decided, player2_wants)
 export const getContinuationStatus = async (
-  publicClient: PublicClient | null,
+  publicClient: AnyPublicClient | null,
   cellId: string
 ): Promise<{ p1Decided: boolean; p1Wants: boolean; p2Decided: boolean; p2Wants: boolean } | null> => {
   if (!publicClient) return null;

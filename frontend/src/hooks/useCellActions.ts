@@ -7,10 +7,12 @@ import type { Cell } from '../types/Cell';
 
 type ViewType = 'lobby' | 'cell' | 'history';
 
+type AnyPublicClient = PublicClient<any, any, any>;
+
 interface UseCellActionsProps {
   address: `0x${string}` | undefined;
   walletClient: WalletClient | null;
-  publicClient: PublicClient | null;
+  publicClient: AnyPublicClient | null;
   setLoading: (loading: boolean) => void;
   setMoveLoading: (loading: boolean) => void;
   setError: (err: string | null) => void;

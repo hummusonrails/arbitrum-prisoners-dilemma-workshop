@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext } from 'react';
 import type { ReactNode } from 'react';
-import { createPublicClient, createWalletClient, custom, http } from 'viem';
-import { localhost, defaultChain } from '../constants';
+import { createPublicClient, createWalletClient, custom } from 'viem';
+import { defaultChain } from '../constants';
 
 
 interface Web3ContextType {
