@@ -101,6 +101,6 @@ export function useCells({ publicClient, isContractInitialized }: UseCellsOption
     setMoveLoading,
     error,
     setError,
-    updateCellsState,
+    updateCellsState
   };
 }

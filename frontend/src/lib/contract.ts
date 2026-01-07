@@ -4,7 +4,7 @@ import abi from '../abi/PrisonersDilemmaContract.json';
 import { parseEther } from 'viem';
 import { localhost } from '../constants';
 
-export const CONTRACT_ADDRESS = '0x79b994d378518eae46917aa19f05ce6545faac26' as const;
+export const CONTRACT_ADDRESS = '0x4a2ba922052ba54e29c5417bc979daaf7d5fe4f4' as const;
 export { abi, localhost };
 
 // Initialize contract
@@ -136,22 +136,22 @@ export const fetchCellData = async (
           let parsedP1Payout = BigInt(0);
           let parsedP2Payout = BigInt(0);
 
-          // Check if round is finished based on payouts
-          // Don't rely on moves being zero since Cooperate = 0 is a valid move
-          if (p1Payout === BigInt(0) && p2Payout === BigInt(0)) {
-            // No payouts yet, round is not finished
-            parsedP1Move = null;
-            parsedP2Move = null;
-            parsedP1Payout = BigInt(0);
-            parsedP2Payout = BigInt(0);
-            isFinished = false;
-          } else {
-            // Payouts exist, round is finished
+          // A round is finished if payouts are non-zero (contract only sets payouts after resolution)
+          // This properly handles the case where both players cooperate (move 0,0) with non-zero payouts
+          isFinished = (p1Payout !== BigInt(0) || p2Payout !== BigInt(0));
+
+          if (isFinished) {
+            // Round is complete - moves are valid (0 = Cooperate, 1 = Defect)
             parsedP1Move = p1Move;
             parsedP2Move = p2Move;
             parsedP1Payout = BigInt(p1Payout);
             parsedP2Payout = BigInt(p2Payout);
-            isFinished = true;
+          } else {
+            // Round not started or moves not yet submitted by both players
+            parsedP1Move = null;
+            parsedP2Move = null;
+            parsedP1Payout = BigInt(0);
+            parsedP2Payout = BigInt(0);
           }
 
           // Always add a round for every round number up to currentRound
@@ -244,4 +244,35 @@ export const startContractInitializationPolling = (
   poll();
   // Return a function to stop polling
   return () => { polling = false; };
+};
+
+// Get continuation status for a cell
+// Returns (player1_decided, player1_wants, player2_decided, player2_wants)
+export const getContinuationStatus = async (
+  publicClient: PublicClient | null,
+  cellId: string
+): Promise<{ p1Decided: boolean; p1Wants: boolean; p2Decided: boolean; p2Wants: boolean } | null> => {
+  if (!publicClient) return null;
+  try {
+    const latestBlock = await publicClient.getBlockNumber();
+    const result = await publicClient.readContract({
+      address: CONTRACT_ADDRESS,
+      abi,
+      functionName: 'getContinuationStatus',
+      args: [BigInt(cellId)],
+      blockNumber: latestBlock,
+    });
+
+    const [p1Decided, p1Wants, p2Decided, p2Wants] = result as [boolean, boolean, boolean, boolean];
+
+    return {
+      p1Decided,
+      p1Wants,
+      p2Decided,
+      p2Wants,
+    };
+  } catch (error) {
+    console.error('[contract] Error fetching continuation status:', error);
+    return null;
+  }
 };

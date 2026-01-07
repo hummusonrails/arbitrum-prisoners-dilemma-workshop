@@ -40,10 +40,39 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
-      // Get the current chainId from the wallet
-      const chainIdHex = await (window as any).ethereum.request({ method: 'eth_chainId' });
-      const chainId = Number(chainIdHex);
+      const ethereum = (window as any).ethereum;
+      const targetChainIdHex = `0x${localhost.id.toString(16)}`;
+
+      // Ensure the wallet is on Nitro Localhost before creating clients
+      const ensureLocalhostChain = async () => {
+        const currentChainIdHex = await ethereum.request({ method: 'eth_chainId' });
+        if (currentChainIdHex === targetChainIdHex) return;
+        try {
+          await ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: targetChainIdHex }],
+          });
+        } catch (switchError: any) {
+          if (switchError?.code === 4902) {
+            await ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: targetChainIdHex,
+                chainName: localhost.name,
+                nativeCurrency: localhost.nativeCurrency,
+                rpcUrls: localhost.rpcUrls.default.http,
+              }],
+            });
+          } else {
+            throw switchError;
+          }
+        }
+      };
+
       const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+      await ensureLocalhostChain();
+      const chainIdHex = await ethereum.request({ method: 'eth_chainId' });
+      const chainId = Number(chainIdHex);
       const newAddress = accounts[0];
       const walletClient = createWalletClient({
         chain: localhost,
@@ -105,7 +134,8 @@ export const Web3Provider = ({ children }: { children: ReactNode }) => {
       console.log('[Web3Provider] Accounts changed:', accounts);
       if (accounts.length === 0) {
         disconnect();
-      } else if (accounts[0] !== address && !isConnected) {
+      } else if (accounts[0] !== address) {
+        // Account has changed - reconnect with new account
         connect();
       }
     };

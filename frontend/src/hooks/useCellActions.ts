@@ -87,14 +87,14 @@ export function useCellActions({
           throw new Error('Transaction reverted');
         }
 
-        // Update state after transaction is confirmed
+        // Refresh state after successful transaction
         try {
           await updateCellsState();
         } catch (refreshError) {
           console.error('Error refreshing cells after create:', refreshError);
         }
       }
-      
+
       return hash;
     } catch (error) {
       const errorMessage = 'Failed to create cell: ' + (error instanceof Error ? error.message : String(error));
@@ -122,6 +122,7 @@ export function useCellActions({
         chain: localhost,
       });
 
+      // Wait for transaction confirmation before updating state
       const receipt = await publicClient.waitForTransactionReceipt({
         hash,
         confirmations: 1,
@@ -132,7 +133,7 @@ export function useCellActions({
         throw new Error('Transaction reverted');
       }
 
-      // Update state after transaction is confirmed
+      // Refresh state after successful transaction
       await updateCellsState();
     } catch (error) {
       setError('Failed to join cell: ' + (error instanceof Error ? error.message : String(error)));
@@ -156,6 +157,7 @@ export function useCellActions({
         chain: localhost,
       });
 
+      // Wait for transaction confirmation before updating state
       const receipt = await publicClient.waitForTransactionReceipt({
         hash,
         confirmations: 1,
@@ -166,7 +168,7 @@ export function useCellActions({
         throw new Error('Transaction reverted');
       }
 
-      // Update state after transaction is confirmed
+      // Refresh state after successful transaction
       await updateCellsState();
     } catch (error) {
       setError('Failed to submit move: ' + (error instanceof Error ? error.message : String(error)));
@@ -190,6 +192,7 @@ export function useCellActions({
         chain: localhost,
       });
 
+      // Wait for transaction confirmation before updating state
       const receipt = await publicClient.waitForTransactionReceipt({
         hash,
         confirmations: 1,
@@ -200,7 +203,7 @@ export function useCellActions({
         throw new Error('Transaction reverted');
       }
 
-      // Update state after transaction is confirmed
+      // Refresh state after successful transaction
       await updateCellsState();
     } catch (error) {
       setError('Failed to submit continuation decision: ' + (error instanceof Error ? error.message : String(error)));

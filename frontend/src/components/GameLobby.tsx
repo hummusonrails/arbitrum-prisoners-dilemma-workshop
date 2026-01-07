@@ -269,17 +269,12 @@ const GameLobby: React.FC<GameLobbyProps> = ({
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {activeCells.map((cell) => {
-              const isYourTurn = cell.currentRound % 2 === 0 
-                ? cell.player1?.toLowerCase() === userAddress?.toLowerCase() 
-                : cell.player2?.toLowerCase() === userAddress?.toLowerCase();
-                
+              // Determine if the current round is complete
+              const currentRound = cell.rounds[cell.currentRound - 1];
+              const isRoundComplete = currentRound?.isComplete || false;
+
               return (
-                <div key={cell.id} className={`relative bg-gray-900 p-5 rounded-xl border-2 ${isYourTurn ? 'border-green-600' : 'border-blue-600'} hover:shadow-lg ${isYourTurn ? 'hover:shadow-green-900/30' : 'hover:shadow-blue-900/30'} transition-all`}>
-                  {isYourTurn && (
-                    <div className="absolute -top-3 -right-3 px-3 py-1 bg-green-600 text-white text-xs font-bold rounded-full animate-pulse">
-                      YOUR TURN
-                    </div>
-                  )}
+                <div key={cell.id} className="relative bg-gray-900 p-5 rounded-xl border-2 border-blue-600 hover:shadow-lg hover:shadow-blue-900/30 transition-all">
                   <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-800">
                     <span className="font-mono text-yellow-400">CELL #{cell.id}</span>
                     <span className="px-2 py-1 bg-gray-800 text-blue-400 text-xs font-bold rounded">
@@ -293,11 +288,14 @@ const GameLobby: React.FC<GameLobbyProps> = ({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Status:</span>
-                      <span className={`font-mono ${isYourTurn ? 'text-green-400' : 'text-yellow-400'}`}>
-                        {isYourTurn ? 'YOUR TURN' : 'WAITING'}
+                      <span className="font-mono text-blue-400">
+                        {isRoundComplete ? 'ROUND COMPLETE' : 'IN PROGRESS'}
                       </span>
                     </div>
-                    <span className="text-gray-400">Rounds Played:</span> {cell.rounds.length}
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Rounds Played:</span>
+                      <span className="font-mono text-gray-200">{cell.rounds.length}</span>
+                    </div>
                   </div>
                   <button
                     onClick={() => onEnterCell(cell.id)}
