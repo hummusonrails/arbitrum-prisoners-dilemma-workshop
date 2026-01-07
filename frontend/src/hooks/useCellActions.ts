@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { parseEther } from 'viem';
 import { generateRandomRounds } from '../utils/CellManager';
 import type { WalletClient, PublicClient } from 'viem';
-import { CONTRACT_ADDRESS, abi, localhost } from '../lib/contract';
+import { CONTRACT_ADDRESS, abi, defaultChain } from '../lib/contract';
 import type { Cell } from '../types/Cell';
 
 type ViewType = 'lobby' | 'cell' | 'history';
@@ -61,7 +61,7 @@ export function useCellActions({
         functionName: 'createCell',
         args: [totalRounds],
         account: address as `0x${string}`,
-        chain: localhost,
+        chain: defaultChain,
         value: stakeValue,
         gasPrice: gasPrice * 2n, // Add some buffer to the gas price
       };
@@ -121,7 +121,7 @@ export function useCellActions({
         args: [BigInt(cellId)],
         account: address as `0x${string}`,
         value: parseEther(stake),
-        chain: localhost,
+        chain: defaultChain,
       });
 
       // Wait for transaction confirmation before updating state
@@ -156,7 +156,7 @@ export function useCellActions({
         functionName: 'submitMove',
         args: [BigInt(cellId), BigInt(move)],
         account: address as `0x${string}`,
-        chain: localhost,
+        chain: defaultChain,
       });
 
       // Wait for transaction confirmation before updating state
@@ -191,7 +191,7 @@ export function useCellActions({
         functionName: 'submitContinuationDecision',
         args: [BigInt(cellId), wantsToContinue],
         account: address as `0x${string}`,
-        chain: localhost,
+        chain: defaultChain,
       });
 
       // Wait for transaction confirmation before updating state
