@@ -6,17 +6,15 @@ interface StatusBannerProps {
   address: string | undefined;
   isContractInitialized: boolean;
   minStake: bigint;
-  error: string | null;
   isPolling: boolean;
 }
 
-const StatusBanner: React.FC<StatusBannerProps> = ({ 
-  isConnected, 
-  address, 
-  isContractInitialized, 
-  minStake, 
-  error, 
-  isPolling 
+const StatusBanner: React.FC<StatusBannerProps> = ({
+  isConnected,
+  address,
+  isContractInitialized,
+  minStake,
+  isPolling
 }) => {
   return (
     <div className="relative w-full">
@@ -52,17 +50,7 @@ const StatusBanner: React.FC<StatusBannerProps> = ({
             <span className="text-teal-200 font-black text-xs">{formatEther(minStake)} ETH</span>
           </div>
         )}
-        
-        {/* Error Alert */}
-        {error && (
-          <div className="flex items-center gap-2 bg-red-900/50 px-3 py-1 rounded-lg border border-red-500/50 animate-pulse">
-            <span className="text-red-400 text-xs">🚨</span>
-            <span className="text-red-300 font-mono text-xs tracking-wider">
-              SYSTEM ERROR: {error.slice(0, 30)}{error.length > 30 ? '...' : ''}
-            </span>
-          </div>
-        )}
-        
+
         {/* Sync Status */}
         {isPolling && (
           <div className="flex items-center gap-2 bg-blue-900/50 px-3 py-1 rounded-lg border border-blue-500/30">
