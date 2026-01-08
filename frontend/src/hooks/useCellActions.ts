@@ -263,7 +263,19 @@ export function useCellActions({
       setLoading(true);
       setError(null);
 
-      console.log('[useCellActions] Submitting continuation decision:', { cellId, wantsToContinue, address });
+      // Get cell data for debugging
+      const cell = cells.find(c => c.id === cellId);
+      console.log('[useCellActions] Submitting continuation decision:', {
+        cellId,
+        wantsToContinue,
+        address,
+        cellData: cell ? {
+          currentRound: cell.currentRound,
+          totalRounds: cell.totalRounds,
+          isComplete: cell.isComplete,
+          roundsLength: cell.rounds.length
+        } : 'not found'
+      });
 
       // First, try to simulate the transaction to catch errors early
       try {
@@ -347,11 +359,41 @@ export function useCellActions({
       await updateCellsState();
     } catch (error) {
       console.error('[useCellActions] Continuation decision failed:', error);
-      setError('Failed to submit continuation decision: ' + (error instanceof Error ? error.message : String(error)));
+
+      // Decode the error to get a user-friendly message
+      let errorMessage = 'Failed to submit continuation decision';
+
+      if (error instanceof BaseError) {
+        const revertError = error.walk(err => err instanceof ContractFunctionRevertedError);
+        if (revertError instanceof ContractFunctionRevertedError) {
+          const errorName = revertError.data?.errorName;
+          console.log('[useCellActions] Contract error during write:', errorName);
+
+          switch (errorName) {
+            case 'CellIsComplete':
+              errorMessage = 'This game has already been completed';
+              break;
+            case 'NotInCell':
+              errorMessage = 'You are not a player in this game';
+              break;
+            case 'MaxRoundsReached':
+              errorMessage = 'Maximum rounds have been reached - the game will end automatically';
+              break;
+            default:
+              errorMessage = revertError.shortMessage || error.message || errorMessage;
+          }
+        } else {
+          errorMessage = error.shortMessage || error.message || errorMessage;
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [walletClient, address, publicClient, setLoading, setError, updateCellsState]);
+  }, [walletClient, address, publicClient, setLoading, setError, updateCellsState, cells]);
 
   // Navigation handlers
   const handleEnterCell = useCallback((cellId: string) => {
