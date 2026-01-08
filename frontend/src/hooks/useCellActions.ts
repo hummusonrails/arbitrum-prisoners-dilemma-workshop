@@ -262,6 +262,63 @@ export function useCellActions({
     try {
       setLoading(true);
       setError(null);
+
+      console.log('[useCellActions] Submitting continuation decision:', { cellId, wantsToContinue, address });
+
+      // First, try to simulate the transaction to catch errors early
+      try {
+        await publicClient.simulateContract({
+          address: CONTRACT_ADDRESS,
+          abi,
+          functionName: 'submitContinuationDecision',
+          args: [BigInt(cellId), wantsToContinue],
+          account: address as `0x${string}`,
+        });
+      } catch (simError: any) {
+        console.error('[useCellActions] Continuation simulation failed:', simError);
+
+        // Extract readable error message from contract revert
+        let errorMessage = 'Transaction would fail';
+
+        // Check if it's a contract revert error with proper error decoding
+        if (simError instanceof BaseError) {
+          const revertError = simError.walk(err => err instanceof ContractFunctionRevertedError);
+          if (revertError instanceof ContractFunctionRevertedError) {
+            const errorName = revertError.data?.errorName;
+            console.log('[useCellActions] Contract error name:', errorName);
+
+            // Map contract errors to user-friendly messages
+            switch (errorName) {
+              case 'CellIsComplete':
+                errorMessage = 'This game has already been completed';
+                break;
+              case 'NotInCell':
+                errorMessage = 'You are not a player in this game';
+                break;
+              case 'MaxRoundsReached':
+                errorMessage = 'Maximum rounds have been reached';
+                break;
+              default:
+                errorMessage = revertError.shortMessage || simError.message;
+            }
+          } else {
+            errorMessage = simError.shortMessage || simError.message;
+          }
+        } else if (simError.message) {
+          // Fallback to string matching for older error formats
+          if (simError.message.includes('CellIsComplete')) {
+            errorMessage = 'This game has already been completed';
+          } else if (simError.message.includes('NotInCell')) {
+            errorMessage = 'You are not a player in this game';
+          } else if (simError.message.includes('MaxRoundsReached')) {
+            errorMessage = 'Maximum rounds have been reached';
+          } else {
+            errorMessage = simError.message;
+          }
+        }
+        throw new Error(errorMessage);
+      }
+
       const hash = await walletClient.writeContract({
         address: CONTRACT_ADDRESS,
         abi,
@@ -270,6 +327,8 @@ export function useCellActions({
         account: address as `0x${string}`,
         chain: defaultChain,
       });
+
+      console.log('[useCellActions] Continuation transaction submitted:', hash);
 
       // Wait for transaction confirmation before updating state
       const receipt = await publicClient.waitForTransactionReceipt({
@@ -282,9 +341,12 @@ export function useCellActions({
         throw new Error('Transaction reverted');
       }
 
+      console.log('[useCellActions] Continuation transaction confirmed');
+
       // Refresh state after successful transaction
       await updateCellsState();
     } catch (error) {
+      console.error('[useCellActions] Continuation decision failed:', error);
       setError('Failed to submit continuation decision: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setLoading(false);
