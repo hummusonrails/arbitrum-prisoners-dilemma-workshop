@@ -407,17 +407,20 @@ impl PrisonersDilemma {
         let p1_move = round.player1_move.unwrap();
         let p2_move = round.player2_move.unwrap();
         let stake = cell.stake_amount;
-        
-        // Simplified payoff calculation
-        let (p1_payout, p2_payout) = match (p1_move, p2_move) {
+        let total_rounds = U256::from(cell.total_rounds);
+
+        // Payoff calculation - divided by total rounds to ensure contract has enough ETH
+        // Base payoffs per round (will be divided by total_rounds)
+        let (p1_base, p2_base) = match (p1_move, p2_move) {
             (Move::Cooperate, Move::Cooperate) => (stake, stake),
             (Move::Defect, Move::Defect) => (stake / U256::from(2), stake / U256::from(2)),
             (Move::Cooperate, Move::Defect) => (stake / U256::from(2), stake + stake / U256::from(2)),
             (Move::Defect, Move::Cooperate) => (stake + stake / U256::from(2), stake / U256::from(2)),
         };
-        
-        round.player1_payout = p1_payout;
-        round.player2_payout = p2_payout;
+
+        // Divide by total rounds so payouts sum to available stake across all rounds
+        round.player1_payout = p1_base / total_rounds;
+        round.player2_payout = p2_base / total_rounds;
         round.is_finished = true;
         
         stylus_core::log(self.vm(), RoundComplete { cell_id, round_num: cell.current_round });
