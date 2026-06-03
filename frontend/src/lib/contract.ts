@@ -1,5 +1,5 @@
 import type { Cell } from '../types/Cell';
-import type { PublicClient, WalletClient } from 'viem';
+import type { WalletClient } from 'viem';
 import abi from '../abi/PrisonersDilemmaContract.json';
 import { parseEther } from 'viem';
 import { localhost } from '../constants';
@@ -18,7 +18,7 @@ export const initializeContract = async (
   try {
     setInitializeLoading(true);
     setError(null);
-    const result = await walletClient.writeContract({
+    await walletClient.writeContract({
       address: CONTRACT_ADDRESS,
       abi,
       functionName: 'initialize',
@@ -36,7 +36,7 @@ export const initializeContract = async (
 
 // Check if contract is initialized
 export const checkContractInitialization = async (
-  publicClient: PublicClient | null,
+  publicClient: any,
   setIsContractInitialized: (v: boolean) => void,
   setMinStake: (v: bigint) => void,
   setError: (msg: string | null) => void
@@ -77,7 +77,7 @@ export const checkContractInitialization = async (
 
 // Fetch cell data from contract
 export const fetchCellData = async (
-  publicClient: PublicClient | null,
+  publicClient: any,
   cellId: string,
   forceRefresh: boolean = false
 ): Promise<Cell | null> => {
@@ -194,42 +194,9 @@ export const fetchCellData = async (
   }
 };
 
-// Get continuation status for a cell
-export const getContinuationStatus = async (
-  publicClient: PublicClient | null,
-  cellId: string
-): Promise<{
-  player1Decided: boolean;
-  player1Wants: boolean;
-  player2Decided: boolean;
-  player2Wants: boolean;
-} | null> => {
-  if (!publicClient) return null;
-  try {
-    const latestBlock = await publicClient.getBlockNumber();
-    const result = await publicClient.readContract({
-      address: CONTRACT_ADDRESS,
-      abi,
-      functionName: 'getContinuationStatus',
-      args: [BigInt(cellId)],
-      blockNumber: latestBlock,
-    });
-    const [player1Decided, player1Wants, player2Decided, player2Wants] = result as [boolean, boolean, boolean, boolean];
-    return {
-      player1Decided,
-      player1Wants,
-      player2Decided,
-      player2Wants,
-    };
-  } catch (error) {
-    console.error('[contract] Error fetching continuation status:', error);
-    return null;
-  }
-};
-
 // Poll contract initialization status every intervalMs milliseconds
 export const startContractInitializationPolling = (
-  publicClient: PublicClient | null,
+  publicClient: any,
   setIsContractInitialized: (v: boolean) => void,
   setMinStake: (v: bigint) => void,
   setError: (msg: string | null) => void,
@@ -249,7 +216,7 @@ export const startContractInitializationPolling = (
 // Get continuation status for a cell
 // Returns (player1_decided, player1_wants, player2_decided, player2_wants)
 export const getContinuationStatus = async (
-  publicClient: PublicClient | null,
+  publicClient: any,
   cellId: string
 ): Promise<{ p1Decided: boolean; p1Wants: boolean; p2Decided: boolean; p2Wants: boolean } | null> => {
   if (!publicClient) return null;

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { parseEther } from 'viem';
 import { generateRandomRounds } from '../utils/CellManager';
-import type { WalletClient, PublicClient } from 'viem';
+import type { WalletClient } from 'viem';
 import { CONTRACT_ADDRESS, abi, localhost } from '../lib/contract';
 import type { Cell } from '../types/Cell';
 
@@ -10,7 +10,7 @@ type ViewType = 'lobby' | 'cell' | 'history';
 interface UseCellActionsProps {
   address: `0x${string}` | undefined;
   walletClient: WalletClient | null;
-  publicClient: PublicClient | null;
+  publicClient: any;
   setLoading: (loading: boolean) => void;
   setMoveLoading: (loading: boolean) => void;
   setError: (err: string | null) => void;
@@ -66,7 +66,7 @@ export function useCellActions({
       
       const gasEstimate = await publicClient.estimateContractGas({
         ...request,
-      }).catch((error) => {
+      }).catch((error: unknown) => {
         console.error('Gas estimation failed:', error);
         return 2000000n;
       });
