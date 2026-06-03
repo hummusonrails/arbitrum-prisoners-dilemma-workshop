@@ -238,7 +238,7 @@ export default function App() {
               onViewHistory={handleViewHistory}
               loading={loading}
               minStake={minStake}
-              userAddress={address}
+              userAddress={address ?? undefined}
             />
           )}
           
@@ -250,7 +250,7 @@ export default function App() {
               onBackToLobby={handleBackToLobby}
               onRefresh={updateCellsState}
               moveLoading={moveLoading}
-              userAddress={address}
+              userAddress={address ?? undefined}
             />
           )}
           
@@ -259,7 +259,7 @@ export default function App() {
               cellHistory={cellHistory}
               onBackToLobby={handleBackToLobby}
               onEnterCell={handleEnterCell}
-              userAddress={address}
+              userAddress={address ?? undefined}
             />
           )}
         </div>

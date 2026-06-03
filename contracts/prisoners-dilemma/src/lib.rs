@@ -21,7 +21,12 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use stylus_sdk::{alloy_primitives::{U256, Address}, prelude::*, stylus_core};
+use stylus_sdk::{
+    alloy_primitives::{Address, B256, U256},
+    call::transfer::transfer_eth,
+    prelude::*,
+    storage::{StorageAddress, StorageBytes, StorageMap, StorageU256},
+};
 use alloy_sol_types::sol;
 
 // Game move options
@@ -64,17 +69,16 @@ pub struct Cell {
 }
 
 // Contract storage
-sol_storage! {
-    #[entrypoint]
-    pub struct PrisonersDilemma {
-        uint256 cell_counter;
-        mapping(uint256 => bytes) cells;
-        mapping(address => uint256) player_to_cell;
-        mapping(bytes32 => uint256) players_to_cell;
-        mapping(uint256 => uint256) cell_stakes;
-        uint256 min_stake;
-        address owner;
-    }
+#[entrypoint]
+#[storage]
+pub struct PrisonersDilemma {
+    cell_counter: StorageU256,
+    cells: StorageMap<U256, StorageBytes>,
+    player_to_cell: StorageMap<Address, StorageU256>,
+    players_to_cell: StorageMap<B256, StorageU256>,
+    cell_stakes: StorageMap<U256, StorageU256>,
+    min_stake: StorageU256,
+    owner: StorageAddress,
 }
 
 // Events and Errors
@@ -154,8 +158,8 @@ impl PrisonersDilemma {
         self.player_to_cell.setter(sender).set(cell_id);
         self.cell_stakes.setter(cell_id).set(stake);
         
-    stylus_core::log(self.vm(), CellCreated { cell_id, player1: sender, stake });
-    Ok(cell_id)
+        self.vm().log(CellCreated { cell_id, player1: sender, stake });
+        Ok(cell_id)
     }
 
     #[payable]
@@ -194,8 +198,8 @@ impl PrisonersDilemma {
         let key = self.hash_players(cell.player1, sender);
         self.players_to_cell.setter(key.into()).set(cell_id);
         
-    stylus_core::log(self.vm(), PlayerJoined { cell_id, player2: sender });
-    Ok(())
+        self.vm().log(PlayerJoined { cell_id, player2: sender });
+        Ok(())
     }
 
     pub fn submit_move(&mut self, cell_id: U256, move_choice: u8) -> Result<(), PrisonersDilemmaErrors> {
@@ -401,7 +405,7 @@ impl PrisonersDilemma {
         round.player2_payout = p2_payout;
         round.is_finished = true;
         
-        stylus_core::log(self.vm(), RoundComplete { cell_id, round_num: cell.current_round });
+        self.vm().log(RoundComplete { cell_id, round_num: cell.current_round });
         
         // Check if we've completed all rounds
         if cell.current_round >= cell.total_rounds {
@@ -432,13 +436,13 @@ impl PrisonersDilemma {
         
         // Transfer payouts
         if total_p1 > U256::ZERO {
-            let _ = self.vm().transfer_eth(cell.player1, total_p1);
+            let _ = transfer_eth(self.vm(), cell.player1, total_p1);
         }
         if total_p2 > U256::ZERO {
-            let _ = self.vm().transfer_eth(cell.player2, total_p2);
+            let _ = transfer_eth(self.vm(), cell.player2, total_p2);
         }
         
-        stylus_core::log(self.vm(), CellComplete { cell_id });
+        self.vm().log(CellComplete { cell_id });
     }
 
     // Serialization
