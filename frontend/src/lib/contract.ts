@@ -1,10 +1,14 @@
 import type { Cell } from '../types/Cell';
 import type { PublicClient, WalletClient } from 'viem';
 import abi from '../abi/PrisonersDilemmaContract.json';
-import { parseEther } from 'viem';
+import { getAddress, parseEther } from 'viem';
 import { localhost, defaultChain } from '../constants';
 
-export const CONTRACT_ADDRESS = (import.meta.env.VITE_CONTRACT_ADDRESS || '0xc0f0a8896aec7d5b6d4989e8417917a8b72224f6') as `0x${string}`;
+// Normalize whatever VITE_CONTRACT_ADDRESS supplies (mixed case, surrounding
+// whitespace, embedded newlines) into a viem-acceptable EIP-55 address.
+// viem 2.x rejects unchecksummed input in readContract / writeContract.
+const RAW_CONTRACT_ADDRESS = (import.meta.env.VITE_CONTRACT_ADDRESS || '0xc0f0a8896aec7d5b6d4989e8417917a8b72224f6').trim();
+export const CONTRACT_ADDRESS = getAddress(RAW_CONTRACT_ADDRESS);
 export { abi, localhost, defaultChain };
 
 type AnyPublicClient = PublicClient<any, any, any>;
