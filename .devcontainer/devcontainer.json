@@ -10,7 +10,7 @@
       "ghcr.io/devcontainers/features/git:1": {}
     },
   
-    "postAttachCommand": "rustup install 1.87.0 && rustup default 1.87.0 && rustup target add wasm32-unknown-unknown && npm install -g pnpm && pnpm install -r && cargo install --force cargo-stylus && curl -L https://foundry.paradigm.xyz | bash && /home/vscode/.foundry/bin/foundryup",
+    "postAttachCommand": "rustup install 1.91.0 && rustup default 1.91.0 && rustup target add wasm32-unknown-unknown && npm install -g pnpm && pnpm install -r && cargo install --force cargo-stylus && curl -L https://foundry.paradigm.xyz | bash && /home/vscode/.foundry/bin/foundryup",
   
     "customizations": {
       "vscode": {
